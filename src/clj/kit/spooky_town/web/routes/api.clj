@@ -33,16 +33,17 @@
 
 ;; Routes
 (defn api-routes [_opts]
-  [["/api/v1"
-    {:swagger {:id ::api-v1}}
-    ["/swagger.json"
-     {:get {:no-doc true
-            :swagger {:info {:title "kit.spooky-town API v1"
-                           :description "API for managing horror/thriller content"
-                           :version "1.0.0"}}
-            :handler (swagger/create-swagger-handler)}}]
-    ["/health"
-     {:get health/healthcheck!}]]])
+  ["/api"
+    route-data
+    ["/v1"
+      ["/swagger.json"
+       {:get {:no-doc true
+              :swagger {:info {:title "kit.spooky-town API v1"
+                             :description "API for managing horror/thriller content"
+                             :version "1.0.0"}}
+              :handler (swagger/create-swagger-handler)}}]
+      ["/health"
+       {:get health/healthcheck!}]]])
 
 (derive :reitit.routes/api :reitit/routes)
 
@@ -50,4 +51,5 @@
   [_ {:keys [base-path]
       :or   {base-path ""}
       :as   opts}]
-  (fn [] [base-path route-data (api-routes opts)]))
+  (fn []
+    (api-routes opts)))
