@@ -1,0 +1,8 @@
+{:full-name "kit/spooky_town"
+ :ns-name   "kit.spooky-town"
+ :sanitized "kit/spooky_town"
+ :name      "spooky_town"
+ :modules   {:root         "modules"
+             :repositories [{:url  "https://github.com/kit-clj/modules.git"
+                             :tag  "master"
+                             :name "kit-modules"}]}}
