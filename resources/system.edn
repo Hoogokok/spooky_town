@@ -40,8 +40,8 @@
 
  :reitit.routes/api
  {:base-path "/api"
-  :env       #ig/ref :system/env 
-  }
+  :env       #ig/ref :system/env
+  :tx-manager #ig/ref :db/tx-manager}
 
  :router/routes
  {:routes #ig/refset :reitit/routes}
@@ -52,20 +52,37 @@
 
  :db.sql/connection
  #profile
- {:dev  {:jdbc-url   "jdbc:postgresql://localhost:5432/spooky_town_dev"
+ {:dev  {:dbtype "postgresql"
+         :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_dev"
          :username "postgres"
          :password "postgres"}
-  :test {:jdbc-url   "jdbc:postgresql://localhost:5432/spooky_town_test"
+  :test {:dbtype "postgresql"
+         :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_test"
          :username "postgres"
          :password "postgres"}
-  :prod {:jdbc-url   #env JDBC_DATABASE_URL}}
+  :prod {:dbtype "postgresql"
+         :jdbc-url #env JDBC_DATABASE_URL}}
+
+ :db/tx-manager 
+ {:conn #ig/ref :db.sql/connection}
 
  :db.sql/migrations
  {:store :database
   :migration-dir "migrations"
-  :db #ig/ref :db.sql/connection
+  :db #profile
+      {:dev {:dbtype "postgresql"
+             :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_dev"
+             :username "postgres"
+             :password "postgres"}
+       :test {:dbtype "postgresql"
+              :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_test"
+              :username "postgres"
+              :password "postgres"}
+       :prod {:dbtype "postgresql"
+              :jdbc-url #env JDBC_DATABASE_URL}}
   :migrate-on-init? true}
 
- :db.sql/queries
- {:queries ["sql/queries.sql"]
+ :db.sql/queries 
+ {:conn  #ig/ref :db.sql/connection
+  :queries ["sql/queries.sql"]
   :options {:quoting :ansi}}}

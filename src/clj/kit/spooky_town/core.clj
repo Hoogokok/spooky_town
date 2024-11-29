@@ -10,6 +10,7 @@
     [kit.spooky-town.web.handler]
     [kit.edge.db.sql.conman]
     [kit.edge.db.sql.migratus]
+    [kit.spooky-town.db.core]
 
     ;; Routes
     [kit.spooky-town.web.routes.api]
