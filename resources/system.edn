@@ -61,11 +61,10 @@
   :prod {:jdbc-url   #env JDBC_DATABASE_URL}}
 
  :db.sql/migrations
- {:migrations-path "migrations"
-  :resource-path "migrations"
-  :init-script "init.sql"
+ {:store :database
   :migration-dir "migrations"
-  :db #ig/ref :db.sql/connection}
+  :db #ig/ref :db.sql/connection
+  :migrate-on-init? true}
 
  :db.sql/queries
  {:queries ["sql/queries.sql"]
