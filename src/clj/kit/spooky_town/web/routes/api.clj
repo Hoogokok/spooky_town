@@ -32,19 +32,19 @@
                 exception/wrap-exception]})
 
 ;; Routes
-(defn api-routes [{:keys [db] :as opts}]
+(defn api-routes [{:keys [tx-manager] :as opts}]
   ["/api"
-    route-data
-    ["/v1"
-      ["/swagger.json"
-       {:get {:no-doc true
-              :swagger {:info {:title "kit.spooky-town API v1"
+   route-data
+   ["/v1"
+    ["/swagger.json"
+     {:get {:no-doc true
+            :swagger {:info {:title "kit.spooky-town API v1"
                              :description "API for managing horror/thriller content"
                              :version "1.0.0"}}
-              :handler (swagger/create-swagger-handler)}}]
-      ["/health"
-       {:get {:handler (fn [req]
-                        (health/healthcheck! (assoc req :db db)))}}]]])
+            :handler (swagger/create-swagger-handler)}}]
+    ["/health"
+     {:get {:handler (fn [req]
+                       (health/healthcheck! (assoc req :tx-manager tx-manager)))}}]]])
 
 (derive :reitit.routes/api :reitit/routes)
 
