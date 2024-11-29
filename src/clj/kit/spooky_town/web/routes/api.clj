@@ -32,7 +32,7 @@
                 exception/wrap-exception]})
 
 ;; Routes
-(defn api-routes [_opts]
+(defn api-routes [{:keys [db] :as opts}]
   ["/api"
     route-data
     ["/v1"
@@ -43,7 +43,8 @@
                              :version "1.0.0"}}
               :handler (swagger/create-swagger-handler)}}]
       ["/health"
-       {:get health/healthcheck!}]]])
+       {:get {:handler (fn [req]
+                        (health/healthcheck! (assoc req :db db)))}}]]])
 
 (derive :reitit.routes/api :reitit/routes)
 
