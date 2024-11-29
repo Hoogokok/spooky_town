@@ -49,4 +49,24 @@
  :router/core
  {:routes #ig/ref :router/routes
   :env #ig/ref :system/env}   
-}
+
+ :db.sql/connection
+ #profile
+ {:dev  {:jdbc-url   "jdbc:postgresql://localhost:5432/spooky_town_dev"
+         :username "postgres"
+         :password "postgres"}
+  :test {:jdbc-url   "jdbc:postgresql://localhost:5432/spooky_town_test"
+         :username "postgres"
+         :password "postgres"}
+  :prod {:jdbc-url   #env JDBC_DATABASE_URL}}
+
+ :db.sql/migrations
+ {:migrations-path "migrations"
+  :resource-path "migrations"
+  :init-script "init.sql"
+  :migration-dir "migrations"
+  :db #ig/ref :db.sql/connection}
+
+ :db.sql/queries
+ {:queries ["sql/queries.sql"]
+  :options {:quoting :ansi}}}
