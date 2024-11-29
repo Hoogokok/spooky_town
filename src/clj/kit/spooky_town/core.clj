@@ -8,6 +8,8 @@
     ;; Edges       
     [kit.edge.server.undertow]
     [kit.spooky-town.web.handler]
+    [kit.edge.db.sql.conman]
+    [kit.edge.db.sql.migratus]
 
     ;; Routes
     [kit.spooky-town.web.routes.api]
