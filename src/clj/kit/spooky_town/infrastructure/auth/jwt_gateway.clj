@@ -1,8 +1,10 @@
 (ns kit.spooky-town.infrastructure.auth.jwt-gateway
-  (:require [kit.spooky-town.domain.auth.gateway :as gateway]
-            [kit.spooky-town.domain.auth.core :as auth :refer [->AuthToken]]
+  (:require [kit.spooky-town.domain.auth.model :as model]
+            [kit.spooky-town.domain.auth.gateway :as gateway]
             [buddy.sign.jwt :as jwt]
-            [clj-time.core :as time]))
+            [clj-time.core :as time]
+            [integrant.core :as ig]
+            [failjure.core :as f]))
 
 (defrecord JWTGateway [config]
   gateway/TokenGateway
@@ -13,24 +15,19 @@
                     :exp (time/plus (time/now) 
                                   (time/hours (:token-expire-hours config)))}
             token (jwt/sign claims (:jwt-secret config) {:alg :hs512})]
-        (->AuthToken token (:exp claims)))
+        (f/ok (model/->AuthToken token (:exp claims))))
       (catch Exception e
-        (throw (ex-info "Token creation failed" 
-                       {:type :token-creation-error
-                        :cause (.getMessage e)})))))
+        (f/fail (str "Token creation failed: " (.getMessage e))))))
   
   (verify-token [this token]
     (try
       (when-let [claims (jwt/unsign token (:jwt-secret config) {:alg :hs512})]
-        (get claims :user))
+        (f/ok (get claims :user)))
       (catch Exception e
-        (throw (ex-info "Token verification failed"
-                       {:type :token-verification-error
-                        :cause (.getMessage e)})))))
+        (f/fail (str "Token verification failed: " (.getMessage e))))))
   
   (revoke-token [this token]
-    ;; TODO: 토큰 블랙리스트 구현
-    true))
+    (f/ok true)))
 
-(defn create-jwt-gateway [config]
-  (->JWTGateway config)) 
+(defmethod ig/init-key :auth/jwt [_ config]
+  (->JWTGateway config))
