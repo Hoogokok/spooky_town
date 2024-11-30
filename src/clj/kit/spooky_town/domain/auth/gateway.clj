@@ -1,6 +1,4 @@
-(ns kit.spooky-town.domain.auth.gateway
-  (:require [kit.spooky-town.domain.auth.core :as auth]
-            [failjure.core :as f]))
+(ns kit.spooky-town.domain.auth.gateway)
 
 (defprotocol TokenGateway
   "외부 토큰 서비스와의 통신을 추상화하는 프로토콜"
