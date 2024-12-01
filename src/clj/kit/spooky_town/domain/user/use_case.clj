@@ -1,22 +1,29 @@
 (ns kit.spooky-town.domain.user.use-case
-  (:require [kit.spooky-town.domain.user.entity :as entity]
-            [kit.spooky-town.domain.user.value :as value]
-            [kit.spooky-town.domain.user.gateway.token :as token-gateway]
-            [kit.spooky-town.domain.user.repository.user-repository :refer [find-by-email save!]]
-            [kit.spooky-town.domain.user.gateway.password :as password-gateway]
-            [failjure.core :as f]))
+  (:require
+   [failjure.core :as f]
+   [kit.spooky-town.domain.user.entity :as entity]
+   [kit.spooky-town.domain.user.gateway.password :as password-gateway]
+   [kit.spooky-town.domain.user.gateway.token :as token-gateway]
+   [kit.spooky-town.domain.user.repository.user-repository :refer [find-by-email
+                                                                   find-by-uuid
+                                                                   save!]]
+   [kit.spooky-town.domain.user.value :as value]))
 
 (defprotocol UserUseCase
   (register-user [this command]
     "새로운 사용자를 등록합니다.")
   (authenticate-user [this command]
-    "사용자 인증을 수행합니다."))
+    "사용자 인증을 수행합니다.")
+  (update-user-name [this user-uuid command]
+    "사용자 이름을 업데이트합니다."))
 
 (def token-expires-in-sec (* 60 60 24))
 
 (defrecord RegisterUserCommand [email name password])
 
 (defrecord AuthenticateUserCommand [email password])
+
+(defrecord UpdateUserNameCommand [name])
 
 (defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository]
   UserUseCase
@@ -68,4 +75,18 @@
       token-ttl (java.time.Duration/ofSeconds token-expires-in-sec)
       token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
      {:user-uuid (:uuid user)
-      :token token})))
+      :token token}))
+
+  (update-user-name [_ user-uuid {:keys [name]}]
+    (f/attempt-all
+     [name' (or (value/create-name name)
+                (f/fail :update-error/invalid-name))
+      _ (with-tx user-repository
+          (fn [repo]
+            (f/attempt-all
+             [user (or (find-by-uuid repo user-uuid)
+                      (f/fail :update-error/user-not-found))
+              updated-user (entity/update-name user name')
+              _ (save! repo updated-user)]
+             true)))]
+     {:user-uuid user-uuid})))

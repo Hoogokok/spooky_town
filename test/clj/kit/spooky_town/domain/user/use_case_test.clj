@@ -79,3 +79,36 @@
               result (use-case/authenticate-user user-use-case command)]
           (is (f/failed? result))
           (is (= :authentication-error/invalid-credentials (f/message result))))))))
+
+(deftest update-user-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
+
+    (testing "유효한 데이터로 사용자 정보 업데이트"
+      (with-redefs [user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :name "Old Name"})
+                    user-repository-fixture/save! (fn [_ _] true)]
+        (let [command {:name "New Name"}
+              result (use-case/update-user-name user-use-case test-uuid command)]
+          (is (f/ok? result))
+          (is (= test-uuid (:user-uuid result))))))
+
+    (testing "존재하지 않는 사용자 업데이트 시도"
+      (with-redefs [user-repository-fixture/find-by-uuid (fn [_ _] nil)]
+        (let [command {:name "New Name"}
+              result (use-case/update-user-name user-use-case test-uuid command)]
+          (is (f/failed? result))
+          (is (= :update-error/user-not-found (f/message result))))))
+
+    (testing "유효하지 않은 이름으로 업데이트 시도"
+      (let [command {:name ""}  ;; 빈 문자열은 유효하지 않은 이름
+            result (use-case/update-user-name user-use-case test-uuid command)]
+        (is (f/failed? result))
+        (is (= :update-error/invalid-name (f/message result)))))))
