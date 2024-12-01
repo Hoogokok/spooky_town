@@ -98,13 +98,6 @@
  {:jwt-secret #or [#env JWT_SECRET "DIFFERENT_SECRET_HERE"]
   :token-expire-hours 24}
 
- :user/repository
- {:db-conn #ig/ref :db.sql/connection}
-
- :auth/service
- {:auth-provider #ig/ref :auth/jwt
-  :user-repository #ig/ref :user/repository}
-
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
 
