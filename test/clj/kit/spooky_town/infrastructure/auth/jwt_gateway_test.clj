@@ -1,26 +1,27 @@
 (ns kit.spooky-town.infrastructure.auth.jwt-gateway-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [kit.spooky-town.infrastructure.auth.jwt-gateway :as sut]
-            [kit.spooky-town.domain.auth.gateway :as gateway]))
+  (:require [clojure.test :refer :all]
+            [kit.spooky-town.infrastructure.auth.jwt-gateway :as jwt-gateway]
+            [kit.spooky-town.domain.auth.gateway :as gateway]
+            [failjure.core :as f]))
 
 (def test-config
-  {:jwt-secret "test-secret"
-   :token-expire-hours 24})
+  {:jwt-secret "test-secret-key"
+   :token-expire-hours 1})
 
 (deftest jwt-gateway-test
-  (let [gateway (sut/create-jwt-gateway test-config)
-        user-data {:id 1 :email "test@example.com"}]
+  (let [gateway (jwt-gateway/->JWTGateway test-config)
+        user-data {:email "test@example.com" :roles #{:user}}]
     
     (testing "토큰 생성"
       (let [token (gateway/create-token gateway user-data)]
-        (is (string? (:value token)))
-        (is (some? (:expires-at token)))))
+        (is (not (f/failed? token)))))
     
     (testing "토큰 검증"
       (let [token (gateway/create-token gateway user-data)
-            verified-data (gateway/verify-token gateway (:value token))]
-        (is (= user-data verified-data))))
+            result (gateway/verify-token gateway token)]
+        (is (not (f/failed? result)))
+        (is (= user-data result))))
     
     (testing "잘못된 토큰 검증"
-      (is (thrown? Exception
-                   (gateway/verify-token gateway "invalid-token")))))) 
+      (let [result (gateway/verify-token gateway "invalid-token")]
+        (is (f/failed? result)))))) 

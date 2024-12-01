@@ -8,26 +8,30 @@
 
 (defrecord JWTGateway [config]
   gateway/TokenGateway
-  
+
   (create-token [this user-data]
     (try
       (let [claims {:user user-data
-                    :exp (time/plus (time/now) 
-                                  (time/hours (:token-expire-hours config)))}
+                    :exp (time/plus (time/now)
+                                    (time/hours (:token-expire-hours config)))}
             token (jwt/sign claims (:jwt-secret config) {:alg :hs512})]
-        (f/ok (model/->AuthToken token (:exp claims))))
+        (model/->AuthToken token (:exp claims)))
       (catch Exception e
         (f/fail (str "Token creation failed: " (.getMessage e))))))
-  
+
   (verify-token [this token]
     (try
-      (when-let [claims (jwt/unsign token (:jwt-secret config) {:alg :hs512})]
-        (f/ok (get claims :user)))
+      (let [token-str (if (instance? kit.spooky_town.domain.auth.model.AuthToken token)
+                       (:value token)
+                       token)]
+        (when-let [claims (jwt/unsign token-str (:jwt-secret config) {:alg :hs512})]
+          (let [user (get claims :user)]
+            (update user :roles #(set (map keyword %))))))
       (catch Exception e
         (f/fail (str "Token verification failed: " (.getMessage e))))))
-  
+
   (revoke-token [this token]
-    (f/ok true)))
+    true))
 
 (defmethod ig/init-key :auth/jwt [_ config]
   (->JWTGateway config))
