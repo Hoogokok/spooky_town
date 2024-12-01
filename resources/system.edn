@@ -16,7 +16,6 @@
  {:router                #ig/ref :router/core 
   :api-path              "/api"
   :cookie-secret         #or [#env COOKIE_SECRET "NRRVZJLCXQTUOLZC"]
-  ;; from ring.middleware.defaults. anti-forgery `false` by default because services may not require it
   :site-defaults-config  {:params    {:urlencoded true
                                       :multipart  true
                                       :nested     true
@@ -36,11 +35,19 @@
                                       :absolute-redirects     true
                                       :content-types          true
                                       :default-charset        "utf-8"}}
-  }
+  :middleware {:session #ig/ref :web.middleware/session
+              :error #ig/ref :web.middleware/error}}
+
+ :web.middleware/error
+ {:error-handlers #ig/ref :error/handlers}
+
+ :error/handlers
+ {:handlers error-handlers}
 
  :reitit.routes/api
  {:base-path "/api"
   :env       #ig/ref :system/env
+  :middleware [#ig/ref :web.middleware/auth]
   :tx-manager #ig/ref :db/tx-manager}
 
  :router/routes
@@ -85,4 +92,21 @@
  :db.sql/queries 
  {:conn  #ig/ref :db.sql/connection
   :queries ["sql/queries.sql"]
-  :options {:quoting :ansi}}}
+  :options {:quoting :ansi}}
+
+ :auth/jwt
+ {:jwt-secret #or [#env JWT_SECRET "DIFFERENT_SECRET_HERE"]
+  :token-expire-hours 24}
+
+ :web.middleware/auth
+ {:auth-gateway #ig/ref :auth/jwt}
+
+ :infrastructure.session/memory {}
+
+ :web.middleware/session
+ {:session-store #ig/ref :infrastructure.session/memory
+  :cookie-name "kit.session"
+  :cookie-attrs {:http-only true
+                 :same-site :strict
+                 :max-age 86400}}
+}
