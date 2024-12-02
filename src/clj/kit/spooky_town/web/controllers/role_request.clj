@@ -39,4 +39,20 @@
       (if (f/ok? result)
         (response/ok {:message "Role request approved successfully"})
         (response/bad-request {:error (f/message result)})))
+    (response/forbidden {:error "Unauthorized access. Admin role required."})))
+
+(defn reject-request
+  "역할 변경 요청을 거절합니다."
+  [{:keys [role-request-use-case identity parameters body-params]}]
+  (if (contains? (:roles identity) :admin)
+    (let [request-id (get-in parameters [:path :id])
+          reason (:reason body-params)
+          result (use-case/reject-role-request 
+                  role-request-use-case 
+                  {:admin-id (:user-id identity)
+                   :request-id request-id
+                   :reason reason})]
+      (if (f/ok? result)
+        (response/ok {:message "Role request rejected successfully"})
+        (response/bad-request {:error (f/message result)})))
     (response/forbidden {:error "Unauthorized access. Admin role required."}))) 
