@@ -46,4 +46,22 @@
            rejected-request (or (entity/reject-request request admin-id reason)
                               (f/fail :role-request/cannot-reject))
            saved-request (repository/update-request role-request-repository rejected-request)]
-          saved-request)))))
+          saved-request))))
+  
+  (get-request [_ {:keys [request-id]}]
+    (with-tx
+      (fn [_]
+        (f/attempt-all
+          [request (or (repository/find-by-id role-request-repository request-id)
+                      (f/fail :role-request/not-found))]
+          request))))
+  
+  (get-user-requests [_ {:keys [user-id]}]
+    (with-tx
+      (fn [_]
+        (repository/find-all-by-user role-request-repository user-id))))
+  
+  (get-pending-requests [_]
+    (with-tx
+      (fn [_]
+        (repository/find-all-pending role-request-repository)))))
