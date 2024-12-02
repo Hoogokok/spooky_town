@@ -35,4 +35,15 @@
           approved-request (or (entity/approve-request request admin-id)
                                (f/fail :role-request/cannot-approve))
           saved-request (repository/update-request role-request-repository approved-request)]
-         saved-request))))) 
+         saved-request))))
+  
+  (reject-role-request [_ {:keys [admin-id request-id reason]}]
+    (with-tx
+      (fn [_]
+        (f/attempt-all
+          [request (or (repository/find-by-id role-request-repository request-id)
+                      (f/fail :role-request/not-found))
+           rejected-request (or (entity/reject-request request admin-id reason)
+                              (f/fail :role-request/cannot-reject))
+           saved-request (repository/update-request role-request-repository rejected-request)]
+          saved-request)))))
