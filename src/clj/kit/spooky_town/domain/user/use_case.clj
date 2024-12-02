@@ -79,7 +79,7 @@
 
   (update-user [_ {:keys [token name email password]}]
     (f/attempt-all
-     [user-id (or (token-gateway/get-user-id token-gateway token)
+     [user-id (or (token-gateway/verify token-gateway token)
                   (f/fail :update-error/invalid-token))
       name' (when name 
              (or (value/create-name name)
