@@ -1,4 +1,4 @@
-(ns kit.spooky-town.db.core
+(ns kit.spooky-town.infrastructure.persistence.core
   (:require
    [integrant.core :as ig]
    [hugsql.core :as hugsql]

@@ -1,37 +1,34 @@
 (ns kit.spooky-town.infrastructure.auth.jwt-gateway
-  (:require [kit.spooky-town.domain.auth.model :as model]
-            [kit.spooky-town.domain.auth.gateway :as gateway]
+  (:require [kit.spooky-town.domain.user.gateway.token :as token]
             [buddy.sign.jwt :as jwt]
             [clj-time.core :as time]
             [integrant.core :as ig]
             [failjure.core :as f]))
 
 (defrecord JWTGateway [config]
-  gateway/TokenGateway
-
-  (create-token [this user-data]
+  token/TokenGateway
+  
+  (generate [this id token-ttl]
     (try
-      (let [claims {:user user-data
-                    :exp (time/plus (time/now)
-                                    (time/hours (:token-expire-hours config)))}
-            token (jwt/sign claims (:jwt-secret config) {:alg :hs512})]
-        (model/->AuthToken token (:exp claims)))
+      (let [claims {:user-id id
+                   :exp (time/plus (time/now)
+                                 (time/hours (or token-ttl 
+                                               (:token-expire-hours config))))}]
+        (jwt/sign claims (:jwt-secret config) {:alg :hs512}))
       (catch Exception e
-        (f/fail (str "Token creation failed: " (.getMessage e))))))
+        (f/fail (str "Token generation failed: " (.getMessage e))))))
 
-  (verify-token [this token]
+  (verify [this token]
     (try
-      (let [token-str (if (instance? kit.spooky_town.domain.auth.model.AuthToken token)
-                       (:value token)
-                       token)]
-        (when-let [claims (jwt/unsign token-str (:jwt-secret config) {:alg :hs512})]
-          (let [user (get claims :user)]
-            (update user :roles #(set (map keyword %))))))
+      (when-let [claims (jwt/unsign token (:jwt-secret config) {:alg :hs512})]
+        (:user-id claims))
       (catch Exception e
         (f/fail (str "Token verification failed: " (.getMessage e))))))
 
   (revoke-token [this token]
+    ;; JWT는 서버 측에서 개별 토큰 무효화가 어려움
+    ;; 실제 무효화가 필요하다면 토큰 블랙리스트 구현 필요
     true))
 
-(defmethod ig/init-key :auth/jwt [_ config]
+(defmethod ig/init-key :infrastructure/jwt-gateway [_ config]
   (->JWTGateway config))

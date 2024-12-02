@@ -1,13 +1,13 @@
 (ns kit.spooky-town.web.middleware.auth-test
   (:require [clojure.test :refer :all]
             [kit.spooky-town.web.middleware.auth :as auth]
-            [kit.spooky-town.domain.auth.gateway :as gateway]
+            [kit.spooky-town.domain.user.gateway.token :as token]
             [failjure.core :as f]))
 
-(defrecord MockAuthGateway [verify-fn]
-  gateway/TokenGateway
-  (create-token [_ _] "mock-token")
-  (verify-token [_ token] (verify-fn token))
+(defrecord MockTokenGateway [verify-fn]
+  token/TokenGateway
+  (generate [_ _ _] "mock-token")
+  (verify [_ token] (verify-fn token))
   (revoke-token [_ _] true))
 
 (defn- make-request
@@ -23,25 +23,25 @@
 
 (deftest wrap-auth-test
   (testing "토큰이 없는 요청"
-    (let [handler (auth/wrap-auth success-handler (->MockAuthGateway nil))
+    (let [handler (auth/wrap-auth success-handler (->MockTokenGateway nil))
           response (handler {:headers {}})]
       (is (= 200 (:status response)))
       (is (nil? (get-in response [:body :identity])))))
 
   (testing "유효한 토큰"
-    (let [user-data {:email "test@example.com"}
-          gateway (->MockAuthGateway (fn [_] user-data))
+    (let [user-data 1  ;; user-id 반환
+          gateway (->MockTokenGateway (fn [_] user-data))
           handler (auth/wrap-auth success-handler gateway)
           response (handler (make-request "valid-token"))]
       (is (= 200 (:status response)))
       (is (= user-data (:body response)))))
 
   (testing "유효하지 않은 토큰"
-    (let [gateway (->MockAuthGateway (fn [_] (f/fail "Invalid token")))
+    (let [gateway (->MockTokenGateway (fn [_] (f/fail :token-error/invalid)))
           handler (auth/wrap-auth success-handler gateway)
           response (handler (make-request "invalid-token"))]
       (is (= 401 (:status response)))
-      (is (= "Invalid token" (get-in response [:body :message]))))))
+      (is (= :token-error/invalid (get-in response [:body :message]))))))
 
 (deftest wrap-auth-required-test
   (testing "인증된 요청"
