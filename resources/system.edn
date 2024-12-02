@@ -104,7 +104,15 @@
  :infrastructure/role-request-repository
  {:datasource #ig/ref :db.sql/connection}
 
+ :infrastructure/event-bus {}
+
+ :domain/user-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :user-repository #ig/ref :infrastructure/user-repository
+  :event-subscriber #ig/ref :infrastructure/event-bus}
+
  :domain/role-request-use-case
  {:with-tx #ig/ref :db/tx-manager
-  :role-request-repository #ig/ref :infrastructure/role-request-repository}
+  :role-request-repository #ig/ref :infrastructure/role-request-repository
+  :event-publisher #ig/ref :infrastructure/event-bus}
 }
