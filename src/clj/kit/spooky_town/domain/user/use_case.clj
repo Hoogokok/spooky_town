@@ -4,7 +4,7 @@
    [kit.spooky-town.domain.user.entity :as entity]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
-   [kit.spooky-town.domain.user.repository.user-repository :refer [find-by-email
+   [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
                                                                    find-by-id
                                                                    save!]]
    [kit.spooky-town.domain.user.value :as value]))

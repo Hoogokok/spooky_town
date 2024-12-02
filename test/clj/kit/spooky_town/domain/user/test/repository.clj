@@ -1,5 +1,5 @@
 (ns kit.spooky-town.domain.user.test.repository
-  (:require [kit.spooky-town.domain.user.repository.user-repository :as user-repository :refer [UserRepository]]))
+  (:require [kit.spooky-town.domain.user.repository.protocol :as user-repository :refer [UserRepository]]))
 
 (defn save! [_ _]
   (throw (ex-info "Not implemented" {})))

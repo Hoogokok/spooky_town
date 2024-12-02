@@ -1,4 +1,4 @@
-(ns kit.spooky-town.domain.user.repository.user-repository)
+(ns kit.spooky-town.domain.user.repository.protocol)
 
 (defprotocol UserRepository
   (save! [this user])
