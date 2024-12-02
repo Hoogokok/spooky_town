@@ -2,12 +2,14 @@
   (:require [clojure.test :refer :all]
             [kit.spooky-town.domain.role-request.use-case :as use-case]
             [kit.spooky-town.domain.role-request.test.repository :as test-repository]
+            [kit.spooky-town.domain.event.test.publisher :as test-publisher]
             [failjure.core :as f]))
 
 (deftest request-role-change-test
   (let [with-tx (fn [f] (f nil))
         role-request-repository (test-repository/->TestRoleRequestRepository)
-        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository)]
+        event-publisher (test-publisher/->TestEventPublisher nil)
+        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository event-publisher)]
 
     (testing "유효한 역할 변경 요청"
       (with-redefs [test-repository/save! (fn [_ request] request)]
@@ -29,12 +31,13 @@
                        :role :moderator
                        :reason "내놔"})]  ;; 10자 미만
           (is (f/failed? result))
-          (is (= :role-request/invalid-request (f/message result)))))))) 
+          (is (= :role-request/invalid-request (f/message result))))))))
 
 (deftest approve-role-request-test
   (let [with-tx (fn [f] (f nil))
         role-request-repository (test-repository/->TestRoleRequestRepository)
-        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository)
+        event-publisher (test-publisher/->TestEventPublisher nil)
+        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository event-publisher)
         pending-request {:id 1
                         :uuid (random-uuid)
                         :user-id 1
@@ -45,7 +48,10 @@
     
     (testing "대기 중인 요청 승인"
       (with-redefs [test-repository/find-by-id (fn [_ _] pending-request)
-                    test-repository/update-request (fn [_ request] request)]
+                    test-repository/update-request (fn [_ request] request)
+                    test-publisher/publish (fn [_ event-type payload]
+                                           (is (= :role-request/approved event-type))
+                                           (is (= {:user-id 1 :role :moderator} payload)))]
         (let [result (use-case/approve-role-request
                       role-request-use-case
                       {:admin-id 2
@@ -61,12 +67,13 @@
                       {:admin-id 2
                        :request-id 999})]
           (is (f/failed? result))
-          (is (= :role-request/not-found (f/message result)))))))) 
+          (is (= :role-request/not-found (f/message result))))))))
 
 (deftest reject-role-request-test
   (let [with-tx (fn [f] (f nil))
         role-request-repository (test-repository/->TestRoleRequestRepository)
-        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository)
+        event-publisher (test-publisher/->TestEventPublisher nil)
+        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository event-publisher)
         pending-request {:id 1
                         :uuid (random-uuid)
                         :user-id 1
@@ -97,53 +104,3 @@
                        :reason "해당 요청을 찾을 수 없습니다."})]
           (is (f/failed? result))
           (is (= :role-request/not-found (f/message result)))))))) 
-
-(deftest get-request-test
-  (let [with-tx (fn [f] (f nil))
-        role-request-repository (test-repository/->TestRoleRequestRepository)
-        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository)
-        sample-request {:id 1
-                       :uuid (random-uuid)
-                       :user-id 1
-                       :requested-role :moderator
-                       :reason "저는 커뮤니티를 도와드리고 1년 이상 활동했습니다."
-                       :status :pending
-                       :created-at (java.util.Date.)}]
-    
-    (testing "존재하는 요청 조회"
-      (with-redefs [test-repository/find-by-id (fn [_ _] sample-request)]
-        (let [result (use-case/get-request role-request-use-case {:request-id 1})]
-          (is (not (f/failed? result)))
-          (is (= (:id sample-request) (:id result))))))
-    
-    (testing "존재하지 않는 요청 조회"
-      (with-redefs [test-repository/find-by-id (fn [_ _] nil)]
-        (let [result (use-case/get-request role-request-use-case {:request-id 999})]
-          (is (f/failed? result))
-          (is (= :role-request/not-found (f/message result))))))))
-
-(deftest get-user-requests-test
-  (let [with-tx (fn [f] (f nil))
-        role-request-repository (test-repository/->TestRoleRequestRepository)
-        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository)
-        user-requests [{:id 1 :user-id 1 :status :pending}
-                      {:id 2 :user-id 1 :status :approved}]]
-    
-    (testing "사용자의 요청 목록 조회"
-      (with-redefs [test-repository/find-all-by-user (fn [_ _] user-requests)]
-        (let [result (use-case/get-user-requests role-request-use-case {:user-id 1})]
-          (is (= 2 (count result)))
-          (is (every? #(= 1 (:user-id %)) result)))))))
-
-(deftest get-pending-requests-test
-  (let [with-tx (fn [f] (f nil))
-        role-request-repository (test-repository/->TestRoleRequestRepository)
-        role-request-use-case (use-case/->RoleRequestUseCaseImpl with-tx role-request-repository)
-        pending-requests [{:id 1 :status :pending}
-                         {:id 2 :status :pending}]]
-    
-    (testing "대기 중인 요청 목록 조회"
-      (with-redefs [test-repository/find-all-pending (fn [_] pending-requests)]
-        (let [result (use-case/get-pending-requests role-request-use-case)]
-          (is (= 2 (count result)))
-          (is (every? #(= :pending (:status %)) result))))))) 

@@ -1,6 +1,7 @@
 (ns kit.spooky-town.domain.role-request.use-case
-  (:require [kit.spooky-town.domain.role-request.entity :as entity]
-            [kit.spooky-town.domain.role-request.repository.protocol :as repository]
+  (:require [kit.spooky-town.domain.role-request.repository.protocol :as repository]
+            [kit.spooky-town.domain.role-request.entity :as entity]
+            [kit.spooky-town.domain.event :as event]
             [failjure.core :as f]))
 
 (defprotocol RoleRequestUseCase
@@ -11,7 +12,7 @@
   (get-user-requests [this command])
   (get-pending-requests [this]))
 
-(defrecord RoleRequestUseCaseImpl [with-tx role-request-repository]
+(defrecord RoleRequestUseCaseImpl [with-tx role-request-repository event-publisher]
   RoleRequestUseCase
   (request-role-change [_ {:keys [user-id role reason]}]
     (with-tx
@@ -26,16 +27,19 @@
          saved-request))))
   
   (approve-role-request [_ {:keys [admin-id request-id]}]
-    
     (with-tx
       (fn [_]
         (f/attempt-all
-         [request (or (repository/find-by-id role-request-repository request-id)
+          [request (or (repository/find-by-id role-request-repository request-id)
                       (f/fail :role-request/not-found))
-          approved-request (or (entity/approve-request request admin-id)
-                               (f/fail :role-request/cannot-approve))
-          saved-request (repository/update-request role-request-repository approved-request)]
-         saved-request))))
+           approved-request (or (entity/approve-request request admin-id)
+                              (f/fail :role-request/cannot-approve))
+           saved-request (repository/update-request role-request-repository approved-request)
+           _ (event/publish event-publisher 
+                          :role-request/approved 
+                          {:user-id (:user-id saved-request)
+                           :role (:requested-role saved-request)})]
+          saved-request))))
   
   (reject-role-request [_ {:keys [admin-id request-id reason]}]
     (with-tx
