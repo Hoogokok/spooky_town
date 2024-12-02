@@ -1,4 +1,4 @@
-(ns kit.spooky-town.db.transaction
+(ns kit.spooky-town.infrastructure.persistence.transaction
   (:require
    [next.jdbc :as jdbc]
    [clojure.tools.logging :as log]

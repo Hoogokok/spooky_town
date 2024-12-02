@@ -1,7 +1,7 @@
 (ns kit.spooky-town.web.controllers.health
   (:require
    [kit.spooky-town.web.responses :as responses]
-   [kit.spooky-town.db.transaction :as tx])
+   [kit.spooky-town.infrastructure.persistence.transaction :as tx])
   (:import
    [java.util Date]))
 
