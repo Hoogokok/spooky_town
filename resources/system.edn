@@ -115,12 +115,6 @@
   :tx-manager #ig/ref :db/tx-manager
   :role-request-use-case #ig/ref :domain/role-request-use-case}
 
- :reitit.swagger/create-swagger-handler {}
-
- :reitit.swagger-ui/create-swagger-ui-handler
- {:path "/api/swagger"
-  :url "/api/swagger.json"}
-
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
 }
