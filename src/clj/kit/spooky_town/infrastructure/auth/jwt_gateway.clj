@@ -8,9 +8,9 @@
 (defrecord JWTGateway [config]
   token/TokenGateway
   
-  (generate [this id token-ttl]
+  (generate [this user-data token-ttl]
     (try
-      (let [claims {:user-id id
+      (let [claims {:user-id user-data
                    :exp (time/plus (time/now)
                                  (time/hours (or token-ttl 
                                                (:token-expire-hours config))))}]
@@ -20,14 +20,14 @@
 
   (verify [this token]
     (try
-      (when-let [claims (jwt/unsign token (:jwt-secret config) {:alg :hs512})]
-        (:user-id claims))
+      (let [claims (jwt/unsign token (:jwt-secret config) {:alg :hs512})]
+        (-> claims
+            :user-id
+            (update :roles #(set (map keyword %)))))
       (catch Exception e
         (f/fail (str "Token verification failed: " (.getMessage e))))))
 
   (revoke-token [this token]
-    ;; JWT는 서버 측에서 개별 토큰 무효화가 어려움
-    ;; 실제 무효화가 필요하다면 토큰 블랙리스트 구현 필요
     true))
 
 (defmethod ig/init-key :infrastructure/jwt-gateway [_ config]
