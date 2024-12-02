@@ -101,15 +101,6 @@
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
 
- :infrastructure.session/memory {}
-
- :web.middleware/session
- {:session-store #ig/ref :infrastructure.session/memory
-  :cookie-name "kit.session"
-  :cookie-attrs {:http-only true
-                 :same-site :strict
-                 :max-age 86400}}
-
  :infrastructure/role-request-repository
  {:datasource #ig/ref :db.sql/connection}
 
