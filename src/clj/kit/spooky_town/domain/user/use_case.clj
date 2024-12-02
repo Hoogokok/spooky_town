@@ -7,7 +7,8 @@
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
                                                                    find-by-id
                                                                    save!]]
-   [kit.spooky-town.domain.user.value :as value]))
+   [kit.spooky-town.domain.user.value :as value]
+   [kit.spooky-town.domain.event :as event]))
 
 (defprotocol UserUseCase
   (register-user [this command]
@@ -15,7 +16,11 @@
   (authenticate-user [this command]
     "사용자 인증을 수행합니다.")
   (update-user [this command]
-    "사용자 정보를 업데이트합니다."))
+    "사용자 정보를 업데이트합니다.")
+  (update-user-role [this command]
+    "사용자의 역할을 업데이트합니다.")
+  (init [this]
+    "이벤트 구독을 초기화합니다."))
 
 (def token-expires-in-sec (* 60 60 24))
 
@@ -25,7 +30,7 @@
 
 (defrecord UpdateUserCommand [token name email password])
 
-(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository]
+(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber]
   UserUseCase
   (register-user [_ {:keys [email name password]}]
     (f/attempt-all
@@ -106,4 +111,21 @@
                                (if hashed-password (entity/update-password user' hashed-password) user'))
                   _ (save! repo updated-user)]
                  updated-user)))]
-     {:user-uuid (:uuid result)})))
+     {:user-uuid (:uuid result)}))
+
+  (update-user-role [_ {:keys [user-id role]}]
+    (with-tx user-repository
+      (fn [_]
+        (f/attempt-all
+          [user (or (find-by-id user-repository user-id)
+                   (f/fail :user/not-found))
+           updated-user (assoc user :roles #{role})
+           saved-user (save! user-repository updated-user)]
+          saved-user))))
+
+  ;; 이벤트 구독 설정을 위한 초기화 함수
+  (init [this]
+    (event/subscribe event-subscriber
+                    :role-request/approved
+                    (fn [{:keys [user-id role]}]
+                      (update-user-role this {:user-id user-id :role role})))))

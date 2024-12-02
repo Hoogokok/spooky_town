@@ -4,14 +4,17 @@
             [kit.spooky-town.domain.user.use-case :as use-case :refer [->UserUseCaseImpl]]
             [kit.spooky-town.domain.user.test.password-gateway :as password-gateway-fixture :refer [->TestPasswordGateway]]
             [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
-            [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]))
+            [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
+  [kit.spooky-town.domain.event.test.subscriber :as event-subscriber-fixture :refer [->TestEventSubscriber]]
+  [kit.spooky-town.domain.event :as event]))
 
 (deftest register-user-test
   (let [with-tx (fn [repo f] (f repo))
         password-gateway (->TestPasswordGateway)
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository)]
+        event-subscriber (->TestEventSubscriber)
+ user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
 
     (testing "유효한 데이터로 사용자 등록"
       (with-redefs [password-gateway-fixture/hash-password (fn [_ password] "hashed_password")
@@ -22,9 +25,8 @@
                        :name "Test User"
                        :password "Valid1!password"}
               result (use-case/register-user user-use-case command)]
-          (println "result:" result)
-          (is (f/ok? result)) 
-          (is (uuid? (:user-uuid result)))         
+          (is (f/ok? result))
+(is (uuid? (:user-uuid result)))
           (is (= "generated_token" (:token result))))))
 
     (testing "이미 존재하는 이메일로 등록 시도"
@@ -42,7 +44,8 @@
         password-gateway (->TestPasswordGateway)
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository)]
+        event-subscriber (->TestEventSubscriber)
+ user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
 
     (testing "유효한 자격 증명으로 인증"
       (with-redefs [user-repository-fixture/find-by-email 
@@ -85,7 +88,8 @@
         password-gateway (->TestPasswordGateway)
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository)
+        event-subscriber (->TestEventSubscriber)
+user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
     (testing "유효한 데이터로 사용자 정보 업데이트"
@@ -142,3 +146,37 @@
               result (use-case/update-user user-use-case command)]
           (is (f/failed? result))
           (is (= :update-error/invalid-password (f/message result))))))))
+
+(deftest update-user-role-test
+  (let [with-tx (fn [_ f] (f nil))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
+
+    (testing "사용자 역할 업데이트"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ _] {:id 1 :email "test@example.com" :roles #{:user}})
+                    user-repository-fixture/save! (fn [_ user] user)
+                    event-subscriber-fixture/subscribe (fn [_ _ _] (fn [_ _] ()))] 
+        (let [result (use-case/update-user-role user-use-case {:user-id 1 :role :moderator})]
+          (is (f/ok? result))
+          (is (= #{:moderator} (:roles result))))))
+
+    (testing "존재하지 않는 사용자"
+      (with-redefs [user-repository-fixture/find-by-id (fn [_ _] nil)]
+        (let [result (use-case/update-user-role user-use-case {:user-id 999 :role :moderator})]
+          (is (f/failed? result))
+          (is (= :user/not-found (f/message result))))))
+
+    (testing "역할 변경 요청 이벤트 구독"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ _] {:id 1 :email "test@example.com" :roles #{:user}})
+                    user-repository-fixture/save! (fn [_ user] user)
+                    event-subscriber-fixture/subscribe (fn [_ event-type handler]
+                                      (is (= :role-request/approved event-type))
+                                      (let [result (handler {:user-id 1 :role :moderator})]
+                                        (is (f/ok? result))
+                                        (is (= #{:moderator} (:roles result)))))]
+        (.init user-use-case)))))
