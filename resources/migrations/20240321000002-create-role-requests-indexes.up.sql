@@ -1,1 +1,1 @@
- 
+CREATE INDEX IF NOT EXISTS idx_role_requests_user_id ON role_requests(user_id); 
