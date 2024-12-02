@@ -18,6 +18,6 @@
 
   UserRepository
   (save! [this user] (save! this user))
-  (find-by-id [this user-id] (find-by-id this user-id))
+  (find-by-id [this id] (find-by-id this id))
   (find-by-email [this email] (find-by-email this email))
   (find-by-uuid [this uuid] (find-by-uuid this uuid)))
