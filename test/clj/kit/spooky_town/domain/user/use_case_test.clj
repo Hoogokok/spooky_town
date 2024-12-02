@@ -118,4 +118,27 @@
                       :name "New Name"}
               result (use-case/update-user user-use-case command)]
           (is (f/failed? result))
-          (is (= :update-error/invalid-token (f/message result))))))))
+          (is (= :update-error/invalid-token (f/message result))))))
+
+    (testing "비밀번호 업데이트"
+      (with-redefs [token-gateway-fixture/get-user-id (fn [_ _] 1)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :name "Test User"})
+                    password-gateway-fixture/hash-password (fn [_ _] "new_hashed_password")
+                    user-repository-fixture/save! (fn [_ _] true)]
+        (let [command {:token "valid-token"
+                      :password "NewValid1!password"}
+              result (use-case/update-user user-use-case command)]
+          (is (f/ok? result))
+          (is (= test-uuid (:user-uuid result))))))
+
+    (testing "유효하지 않은 비밀번호로 업데이트 시도"
+      (with-redefs [token-gateway-fixture/get-user-id (fn [_ _] 1)]
+        (let [command {:token "valid-token"
+                      :password "weak"}
+              result (use-case/update-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :update-error/invalid-password (f/message result))))))))

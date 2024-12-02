@@ -23,7 +23,7 @@
 
 (defrecord AuthenticateUserCommand [email password])
 
-(defrecord UpdateUserCommand [name email])
+(defrecord UpdateUserCommand [token name email password])
 
 (defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository]
   UserUseCase
@@ -77,7 +77,7 @@
      {:user-uuid (:uuid user)
       :token token}))
 
-  (update-user [_ {:keys [token name email]}]
+  (update-user [_ {:keys [token name email password]}]
     (f/attempt-all
      [user-id (or (token-gateway/get-user-id token-gateway token)
                   (f/fail :update-error/invalid-token))
@@ -87,7 +87,13 @@
       email' (when email
               (or (value/create-email email)
                   (f/fail :update-error/invalid-email)))
-      result (with-tx user-repository        ;; 결과를 바인딩
+      password' (when password
+                 (or (value/create-password password)
+                     (f/fail :update-error/invalid-password)))
+      hashed-password (when password'
+                       (or (password-gateway/hash-password password-gateway password')
+                           (f/fail :update-error/password-hashing-failed)))
+      result (with-tx user-repository
               (fn [repo]
                 (f/attempt-all
                  [user (or (find-by-id repo user-id)
@@ -96,7 +102,8 @@
                       (f/fail :update-error/email-already-exists))
                   updated-user (as-> user user'
                                (if name' (entity/update-name user' name') user')
-                               (if email' (entity/update-email user' email') user'))
+                               (if email' (entity/update-email user' email') user')
+                               (if hashed-password (entity/update-password user' hashed-password) user'))
                   _ (save! repo updated-user)]
-                 updated-user)))]           ;; 업데이트된 사용자 반환
-     {:user-uuid (:uuid result)})))         ;; 바인딩된 결과 사용
+                 updated-user)))]
+     {:user-uuid (:uuid result)})))
