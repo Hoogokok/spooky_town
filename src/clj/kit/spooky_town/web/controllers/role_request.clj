@@ -17,4 +17,12 @@
         (if (f/ok? result)
           (response/created "" {:message "Role request created successfully."})
           (response/bad-request {:error (f/message result)})))
-      (response/bad-request {:error "Invalid request parameters."})))) 
+      (response/bad-request {:error "Invalid request parameters."}))))
+
+(defn get-pending-requests
+  "대기 중인 역할 변경 요청 목록을 조회합니다."
+  [{:keys [role-request-use-case identity]}]
+  (if (contains? (:roles identity) :admin)
+    (let [requests (use-case/get-pending-requests role-request-use-case)]
+      (response/ok requests))
+    (response/forbidden {:error "Unauthorized access. Admin role required."}))) 
