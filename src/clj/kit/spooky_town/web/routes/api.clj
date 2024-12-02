@@ -76,7 +76,16 @@
             :summary "대기 중인 역할 변경 요청 목록 조회"
             :description "관리자가 승인 대기 중인 역할 변경 요청 목록을 조회합니다."
             :swagger {:tags ["role-requests"]
-                     :security [{:bearer []}]}}}]]])
+                     :security [{:bearer []}]}}}
+    
+    ["/:id/approve"
+     {:put {:handler (fn [req]
+                       (role-request/approve-request
+                        (assoc req :role-request-use-case role-request-use-case)))
+            :parameters {:path {:id int?}}
+            :responses {200 {:body {:message string?}}
+                        400 {:body {:error string?}}
+                        403 {:body {:error string?}}}}}]]]])
 
 (derive :reitit.routes/api :reitit/routes)
 
