@@ -17,10 +17,22 @@
     (with-tx
       (fn [_]
         (f/attempt-all
-          [request (or (entity/create-role-request
-                        {:user-id user-id
-                         :requested-role role
-                         :reason reason})
+         [request (or (entity/create-role-request
+                       {:user-id user-id
+                        :requested-role role
+                        :reason reason})
                       (f/fail :role-request/invalid-request))
-           saved-request (repository/save role-request-repository request)]
-          saved-request))))) 
+          saved-request (repository/save role-request-repository request)]
+         saved-request))))
+  
+  (approve-role-request [_ {:keys [admin-id request-id]}]
+    
+    (with-tx
+      (fn [_]
+        (f/attempt-all
+         [request (or (repository/find-by-id role-request-repository request-id)
+                      (f/fail :role-request/not-found))
+          approved-request (or (entity/approve-request request admin-id)
+                               (f/fail :role-request/cannot-approve))
+          saved-request (repository/update-request role-request-repository approved-request)]
+         saved-request))))) 
