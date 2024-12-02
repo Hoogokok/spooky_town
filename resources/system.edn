@@ -109,4 +109,11 @@
   :cookie-attrs {:http-only true
                  :same-site :strict
                  :max-age 86400}}
+
+ :infrastructure/role-request-repository
+ {:datasource #ig/ref :db.sql/connection}
+
+ :domain/role-request-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :role-request-repository #ig/ref :infrastructure/role-request-repository}
 }
