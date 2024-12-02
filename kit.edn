@@ -1,5 +1,5 @@
 {:full-name "kit/spooky_town"
- :ns-name   "kit.spooky-town"
+ :ns-name   "kit.spooky_town"
  :sanitized "kit/spooky_town"
  :name      "spooky_town"
  :modules   {:root         "modules"
