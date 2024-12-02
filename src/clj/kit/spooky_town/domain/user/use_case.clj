@@ -1,14 +1,14 @@
 (ns kit.spooky-town.domain.user.use-case
   (:require
    [failjure.core :as f]
+   [integrant.core :as ig]
+   [kit.spooky-town.domain.event :as event]
    [kit.spooky-town.domain.user.entity :as entity]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
-                                                                   find-by-id
-                                                                   save!]]
-   [kit.spooky-town.domain.user.value :as value]
-   [kit.spooky-town.domain.event :as event]))
+                                                            find-by-id save!]]
+   [kit.spooky-town.domain.user.value :as value]))
 
 (defprotocol UserUseCase
   (register-user [this command]
@@ -129,3 +129,8 @@
                     :role-request/approved
                     (fn [{:keys [user-id role]}]
                       (update-user-role this {:user-id user-id :role role})))))
+
+
+(defmethod ig/init-key :domain/user-use-case
+  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber]}]
+  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber))

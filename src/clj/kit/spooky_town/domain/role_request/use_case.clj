@@ -2,7 +2,8 @@
   (:require [kit.spooky-town.domain.role-request.repository.protocol :as repository]
             [kit.spooky-town.domain.role-request.entity :as entity]
             [kit.spooky-town.domain.event :as event]
-            [failjure.core :as f]))
+            [failjure.core :as f]
+            [integrant.core :as ig]))
 
 (defprotocol RoleRequestUseCase
   (request-role-change [this command])
@@ -69,3 +70,7 @@
     (with-tx
       (fn [_]
         (repository/find-all-pending role-request-repository)))))
+
+(defmethod ig/init-key :domain/role-request-use-case
+  [_ {:keys [with-tx role-request-repository event-publisher]}]
+  (->RoleRequestUseCaseImpl with-tx role-request-repository event-publisher))
