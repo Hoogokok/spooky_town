@@ -1,16 +1,18 @@
 (ns kit.spooky-town.web.routes.api
   (:require
+   [clojure.spec.alpha :as s]
+   [integrant.core :as ig]
    [kit.spooky-town.web.controllers.health :as health]
+   [kit.spooky-town.web.controllers.password :as password]
+   [kit.spooky-town.web.controllers.role-request :as role-request]
+   [kit.spooky-town.web.controllers.user :as user]
+   [kit.spooky-town.web.middleware.auth :as auth]
    [kit.spooky-town.web.middleware.exception :as exception]
    [kit.spooky-town.web.middleware.formats :as formats]
-   [integrant.core :as ig]
    [reitit.coercion.malli :as malli]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
-   [kit.spooky-town.web.controllers.role-request :as role-request]
-   [kit.spooky-town.web.controllers.password :as password]
-   [kit.spooky-town.web.middleware.auth :as auth] 
    [reitit.swagger :as swagger]))
 
 (def route-data
@@ -51,6 +53,23 @@
      {:get {:handler (fn [req]
                        (health/healthcheck! (assoc req :tx-manager tx-manager)))}}]
     
+      ["/users"
+     ["/me"
+      ["/withdraw"
+       {:delete {:handler (fn [req]
+                            (user/withdraw
+                             (assoc req :user-use-case user-use-case)))
+                 :parameters {:body {:password string?
+                                     :reason (s/nilable string?)}}
+                 :responses {204 {}
+                             400 {:body {:error string?}}
+                             401 {:body {:error string?}}
+                             404 {:body {:error string?}}
+                             500 {:body {:error string?}}}
+                 :summary "회원 탈퇴"
+                 :description "비밀번호 확인 후 회원 탈퇴를 진행합니다."
+                 :swagger {:tags ["users"]
+                           :security [{:bearer []}]}}}]]] 
     ["/role-requests"
      {:post {:handler (fn [req]
                         (role-request/create-request
