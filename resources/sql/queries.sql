@@ -118,3 +118,10 @@ WHERE uuid = :uuid
 SELECT id
 FROM role_requests
 WHERE uuid = :uuid
+
+-- :name mark-user-as-withdrawn :! :n
+-- :doc 사용자를 탈퇴 처리합니다
+UPDATE users
+SET deleted_at = :deleted_at,
+    withdrawal_reason = :withdrawal_reason
+WHERE uuid = :uuid

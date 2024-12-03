@@ -3,11 +3,14 @@
    [failjure.core :as f]
    [integrant.core :as ig]
    [kit.spooky-town.domain.event :as event]
-   [kit.spooky-town.domain.user.entity :as entity]
+   [kit.spooky-town.domain.user.entity :as entity :refer [admin?]]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
-                                                            find-by-id save!]]
+                                                            find-by-id
+                                                            find-by-uuid
+                                                            find-id-by-uuid
+                                                            save!]]
    [kit.spooky-town.domain.user.value :as value]))
 
 (defprotocol UserUseCase
@@ -20,7 +23,15 @@
   (update-user-role [this command]
     "사용자의 역할을 업데이트합니다.")
   (init [this]
-    "이벤트 구독을 초기화합니다."))
+    "이벤트 구독을 초기화합니다.")
+ (request-password-reset [this command]
+                         "비밀번호 초기화를 요청합니다.")
+ (reset-password [this command]
+                 "비밀번호를 초기화합니다.")
+  (withdraw [this command]
+    "사용자가 회원 탈퇴를 진행합니다.")
+  (delete-user [this command]
+    "관리자가 사용자를 탈퇴 처리합니다."))
 
 (def token-expires-in-sec (* 60 60 24))
 
@@ -29,6 +40,10 @@
 (defrecord AuthenticateUserCommand [email password])
 
 (defrecord UpdateUserCommand [token name email password])
+
+(defrecord WithdrawCommand [user-uuid password reason])
+
+(defrecord DeleteUserCommand [admin-uuid user-uuid reason])
 
 (defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber]
   UserUseCase
@@ -73,9 +88,11 @@
                  (fn [repo]
                    (find-by-email repo email')))
                (f/fail :authentication-error/user-not-found))
+      _ (when (:deleted-at user)
+          (f/fail :authentication-error/withdrawn-user))
       _ (or (password-gateway/verify-password password-gateway
-                                              password'
-                                              (:hashed-password user))
+                                            password'
+                                            (:hashed-password user))
             (f/fail :authentication-error/invalid-credentials))
       token-ttl (java.time.Duration/ofSeconds token-expires-in-sec)
       token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
@@ -86,6 +103,10 @@
     (f/attempt-all
      [user-id (or (token-gateway/verify token-gateway token)
                   (f/fail :update-error/invalid-token))
+      user (or (find-by-id user-repository user-id)
+               (f/fail :update-error/user-not-found))
+      _ (when (:deleted-at user)
+          (f/fail :update-error/withdrawn-user))
       name' (when name 
              (or (value/create-name name)
                  (f/fail :update-error/invalid-name)))
@@ -101,35 +122,114 @@
       result (with-tx user-repository
               (fn [repo]
                 (f/attempt-all
-                 [user (or (find-by-id repo user-id)
-                          (f/fail :update-error/user-not-found))
-                  _ (when (and email' (find-by-email repo email'))
-                      (f/fail :update-error/email-already-exists))
+                 [_ (when (and email' (find-by-email repo email'))
+                     (f/fail :update-error/email-already-exists))
                   updated-user (as-> user user'
                                (if name' (entity/update-name user' name') user')
                                (if email' (entity/update-email user' email') user')
                                (if hashed-password (entity/update-password user' hashed-password) user'))
                   _ (save! repo updated-user)]
                  updated-user)))]
-     {:user-uuid (:uuid result)}))
+     {:user-uuid (:uuid result)
+      :email (:email result)
+      :name (:name result)}))
 
-  (update-user-role [_ {:keys [user-id role]}]
+  (update-user-role [_ {:keys [admin-uuid user-uuid role]}]
     (with-tx user-repository
-      (fn [_]
+      (fn [repo]
         (f/attempt-all
-          [user (or (find-by-id user-repository user-id)
-                   (f/fail :user/not-found))
-           updated-user (assoc user :roles #{role})
-           saved-user (save! user-repository updated-user)]
-          saved-user))))
+         [admin-id (or (find-id-by-uuid repo admin-uuid)
+                      (f/fail :admin/not-found))
+          user-id (or (find-id-by-uuid repo user-uuid)
+                      (f/fail :user/not-found))
+          [admin user] [(find-by-id repo admin-id)
+                       (find-by-id repo user-id)]
+          _ (when (or (nil? admin) (nil? user))
+              (f/fail :user/not-found))
+          _ (when-not (admin? admin)
+              (f/fail :update-error/insufficient-permissions))
+          _ (when (:deleted-at user)
+              (f/fail :update-error/withdrawn-user))
+          updated-user (assoc user :roles #{role})
+          saved-user (save! repo updated-user)]
+         {:user-uuid (:uuid saved-user)
+          :roles (:roles saved-user)}))))
 
-  ;; 이벤트 구독 설정을 위한 초기화 함수
+  (request-password-reset [_ {:keys [email]}]
+    (with-tx user-repository
+      (fn [repo]
+        (f/attempt-all
+         [email' (or (value/create-email email)
+                    (f/fail :password-reset/invalid-email))
+          user (or (find-by-email repo email')
+                  (f/fail :password-reset/user-not-found))
+          _ (when (:deleted-at user)
+              (f/fail :password-reset/withdrawn-user))
+          _ (when-let [existing-token (token-gateway/find-valid-token token-gateway (:uuid user))]
+              (f/fail :password-reset/token-already-exists))
+          _ (when (token-gateway/check-rate-limit token-gateway email' :password-reset)
+              (f/fail :password-reset/rate-limit-exceeded))
+          token-ttl (java.time.Duration/ofHours 24)
+          reset-token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
+         {:token reset-token}))))
+
+  (reset-password [_ {:keys [token new-password]}]
+    (with-tx user-repository
+      (fn [repo]
+        (f/attempt-all
+         [user-uuid (token-gateway/verify token-gateway token)
+          user (or (find-by-uuid repo user-uuid)
+                  (f/fail :password-reset/user-not-found))
+          _ (when (:deleted-at user)
+              (f/fail :password-reset/withdrawn-user))
+          hashed-password (password-gateway/hash-password password-gateway new-password)
+          updated-user (assoc user :password hashed-password)
+          saved-user (save! repo updated-user)]
+         {:user-uuid (:uuid saved-user)}))))
+
   (init [this]
     (event/subscribe event-subscriber
-                    :role-request/approved
-                    (fn [{:keys [user-id role]}]
-                      (update-user-role this {:user-id user-id :role role})))))
+               :role-request/approved
+               (fn [{:keys [user-id role]}]
+                 (update-user-role this {:user-id user-id :role role}))))
 
+  (withdraw [_ {:keys [user-uuid password reason]}]
+    (f/attempt-all
+     [password' (or (value/create-password password)
+                   (f/fail :withdrawal-error/invalid-password))
+      result (with-tx user-repository
+               (fn [repo]
+                 (f/attempt-all
+                  [user (or (find-by-uuid repo user-uuid)
+                           (f/fail :withdrawal-error/user-not-found))
+                   _ (when (:deleted-at user)
+                       (f/fail :withdrawal-error/already-withdrawn))
+                   _ (or (password-gateway/verify-password password-gateway
+                                                         password'
+                                                         (:hashed-password user))
+                         (f/fail :withdrawal-error/invalid-credentials))
+                   withdrawn-user (entity/mark-as-withdrawn user reason)
+                   _ (save! repo withdrawn-user)]
+                  true)))]
+     {:success true}))
+
+  (delete-user [_ {:keys [admin-uuid user-uuid reason]}]
+    (f/attempt-all
+     [admin (or (find-by-id user-repository admin-uuid)
+                (f/fail :delete-error/admin-not-found))
+      _ (when-not (admin? admin)
+          (f/fail :delete-error/insufficient-permissions))
+      result (with-tx user-repository
+               (fn [repo]
+                 (f/attempt-all
+                  [user (or (find-by-id repo user-uuid)
+                            (f/fail :delete-error/user-not-found))
+                   _ (when (:deleted-at user)
+                       (f/fail :delete-error/already-withdrawn))
+                   withdrawn-user (entity/mark-as-withdrawn user reason)
+                   _ (save! repo withdrawn-user)]
+                  true)))]
+     {:success true})))
 
 (defmethod ig/init-key :domain/user-use-case
   [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber]}]

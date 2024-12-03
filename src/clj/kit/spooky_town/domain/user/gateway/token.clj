@@ -1,14 +1,13 @@
 (ns kit.spooky-town.domain.user.gateway.token)
 
 (defprotocol TokenGateway
-  "토큰 관리를 위한 게이트웨이 프로토콜
-   
-   토큰 구조:
-   - generate 시: {:user-id user-data, :exp timestamp}
-   - verify 시: user-data (예: {:email string, :roles #{keyword}})"
-  (generate [this id token-ttl]
-    "사용자 아이디와 만료 시간으로 토큰을 생성")
+  (generate [this user-uuid ttl]
+    "토큰을 생성합니다.")
   (verify [this token]
-    "토큰을 검증하고 사용자 아이디를 반환")
+    "토큰을 검증하고 user-uuid를 반환합니다.")
   (revoke-token [this token]
-    "토큰을 무효화"))
+    "토큰을 무효화합니다.")
+  (find-valid-token [this user-uuid]
+    "사용자의 유효한 토큰을 찾습니다.")
+  (check-rate-limit [this key action]
+    "특정 액션에 대한 rate limit을 체크합니다."))

@@ -1,15 +1,18 @@
 (ns kit.spooky-town.web.routes.api
   (:require
+   [clojure.spec.alpha :as s]
+   [integrant.core :as ig]
    [kit.spooky-town.web.controllers.health :as health]
+   [kit.spooky-town.web.controllers.password :as password]
+   [kit.spooky-town.web.controllers.role-request :as role-request]
+   [kit.spooky-town.web.controllers.user :as user]
+   [kit.spooky-town.web.middleware.auth :as auth]
    [kit.spooky-town.web.middleware.exception :as exception]
    [kit.spooky-town.web.middleware.formats :as formats]
-   [integrant.core :as ig]
    [reitit.coercion.malli :as malli]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
-   [kit.spooky-town.web.controllers.role-request :as role-request]
-   [kit.spooky-town.web.middleware.auth :as auth] 
    [reitit.swagger :as swagger]))
 
 (def route-data
@@ -36,7 +39,7 @@
                 auth/wrap-auth-required]})
 
 ;; Routes
-(defn api-routes [{:keys [role-request-use-case tx-manager] :as opts}]
+(defn api-routes [{:keys [role-request-use-case user-use-case tx-manager] :as opts}]
   ["/api"
    route-data
    ["/v1"
@@ -49,7 +52,96 @@
     ["/health"
      {:get {:handler (fn [req]
                        (health/healthcheck! (assoc req :tx-manager tx-manager)))}}]
-    
+
+    ["/auth"
+     ["/login"
+      {:post {:handler (fn [req]
+                         (user/authenticate
+                          (assoc req :user-use-case user-use-case)))
+              :parameters {:body {:email string?
+                                  :password string?}}
+              :responses {200 {:body {:token string?}}
+                          400 {:body {:error string?}}
+                          401 {:body {:error string?}}
+                          403 {:body {:error string?}}
+                          404 {:body {:error string?}}
+                          500 {:body {:error string?}}}
+              :summary "사용자 인증"
+              :description "이메일과 비밀번호로 사용자를 인증합니다."
+              :swagger {:tags ["auth"]}}}]]
+
+    ["/users"
+     ["" {:post {:handler (fn [req]
+                            (user/register
+                             (assoc req :user-use-case user-use-case)))
+                 :parameters {:body {:email string?
+                                     :name string?
+                                     :password string?}}
+                 :responses {201 {:body {:token string?}}
+                             400 {:body {:error string?}}
+                             409 {:body {:error string?}}
+                             500 {:body {:error string?}}}
+                 :summary "새로운 사용자를 등록합니다"
+                 :description "이메일, 이름, 비밀번호로 새로운 사용자를 등록합니다."
+                 :swagger {:tags ["users"]}}}]
+     ["/:id/role"
+      {:put {:handler (fn [req]
+                        (user/update-user-role
+                         (-> req
+                             (assoc :user-use-case user-use-case)
+                             (assoc-in [:body-params :user-uuid] (get-in req [:path-params :id])))))
+             :parameters {:path {:id string?}
+                          :body {:role string?}}
+             :responses {200 {:body {:user-uuid string?
+                                     :roles #{string?}}}
+                         400 {:body {:error string?}}
+                         404 {:body {:error string?}}
+                         500 {:body {:error string?}}}
+             :summary "사용자 역할 업데이트"
+             :description "사용자의 역할을 업데이트합니다."
+             :swagger {:tags ["users"]
+                       :security [{:bearer []}]}}}]
+     ["/me"
+      ["/withdraw"
+       {:delete {:handler (fn [req]
+                            (user/withdraw
+                             (assoc req :user-use-case user-use-case)))
+                 :parameters {:body {:password string?
+                                     :reason (s/nilable string?)}}
+                 :responses {204 {}
+                             400 {:body {:error string?}}
+                             401 {:body {:error string?}}
+                             404 {:body {:error string?}}
+                             500 {:body {:error string?}}}
+                 :summary "회원 탈퇴"
+                 :description "비밀번호 확인 후 회원 탈퇴를 진행합니다."
+                 :swagger {:tags ["users"]
+                           :security [{:bearer []}]}}}]
+      ["/password/reset"
+       {:post {:handler (fn [req]
+                          (password/request-reset
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:email string?}}
+               :responses {200 {:body {:token string?}}
+                           400 {:body {:error string?}}
+                           404 {:body {:error string?}}
+                           429 {:body {:error string?}}}
+               :summary "비밀번호 초기화 요청"
+               :description "이메일을 통해 비밀번호 초기화를 요청합니다."
+               :swagger {:tags ["users"]}}}]
+      ["/password/reset/confirm"
+       {:post {:handler (fn [req]
+                          (password/reset-password
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:token string?
+                                   :new-password string?}}
+               :responses {200 {:body {:user-uuid string?}}
+                           400 {:body {:error string?}}
+                           401 {:body {:error string?}}
+                           404 {:body {:error string?}}}
+               :summary "비밀번호 초기화 완료"
+               :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
+               :swagger {:tags ["users"]}}}]]]
     ["/role-requests"
      {:post {:handler (fn [req]
                         (role-request/create-request
@@ -99,7 +191,26 @@
              :summary "역할 변경 요청 거절"
              :description "관리자가 대기 중인 역할 변경 요청을 거절합니다."
              :swagger {:tags ["role-requests"]
-                       :security [{:bearer []}]}}}]]]])
+                       :security [{:bearer []}]}}}]
+
+
+     ["/admin"
+      ["/users"
+       ["/:id"
+        {:delete {:handler (fn [req]
+                             (user/delete-user
+                              (assoc req :user-use-case user-use-case)))
+                  :parameters {:path {:id string?}
+                               :body {:reason string?}}
+                  :responses {204 {}
+                              400 {:body {:error string?}}
+                              403 {:body {:error string?}}
+                              404 {:body {:error string?}}
+                              500 {:body {:error string?}}}
+                  :summary "관리자가 사용자를 탈퇴 처리합니다"
+                  :description "관리자 권한으로 특정 사용자를 탈퇴 처리합니다."
+                  :swagger {:tags ["admin"]
+                            :security [{:bearer []}]}}}]]]]]])
 
 (derive :reitit.routes/api :reitit/routes)
 
