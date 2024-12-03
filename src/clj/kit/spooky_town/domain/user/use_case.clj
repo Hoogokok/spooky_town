@@ -101,6 +101,10 @@
     (f/attempt-all
      [user-id (or (token-gateway/verify token-gateway token)
                   (f/fail :update-error/invalid-token))
+      user (or (find-by-id user-repository user-id)
+               (f/fail :update-error/user-not-found))
+      _ (when (:deleted-at user)
+          (f/fail :update-error/withdrawn-user))
       name' (when name 
              (or (value/create-name name)
                  (f/fail :update-error/invalid-name)))
@@ -116,17 +120,17 @@
       result (with-tx user-repository
               (fn [repo]
                 (f/attempt-all
-                 [user (or (find-by-id repo user-id)
-                          (f/fail :update-error/user-not-found))
-                  _ (when (and email' (find-by-email repo email'))
-                      (f/fail :update-error/email-already-exists))
+                 [_ (when (and email' (find-by-email repo email'))
+                     (f/fail :update-error/email-already-exists))
                   updated-user (as-> user user'
                                (if name' (entity/update-name user' name') user')
                                (if email' (entity/update-email user' email') user')
                                (if hashed-password (entity/update-password user' hashed-password) user'))
                   _ (save! repo updated-user)]
                  updated-user)))]
-     {:user-uuid (:uuid result)}))
+     {:user-uuid (:uuid result)
+      :email (:email result)
+      :name (:name result)}))
 
   (update-user-role [_ {:keys [user-id role]}]
     (with-tx user-repository

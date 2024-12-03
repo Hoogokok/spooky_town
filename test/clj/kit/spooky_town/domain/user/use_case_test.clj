@@ -100,63 +100,65 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
     (testing "유효한 데이터로 사용자 정보 업데이트"
-      (with-redefs [token-gateway-fixture/verify (fn [_ _] 1)
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
                     user-repository-fixture/find-by-id
                     (fn [_ _] 
                       {:uuid test-uuid
-                       :email "test@example.com"
+                       :email "old@example.com"
                        :name "Old Name"})
                     user-repository-fixture/find-by-email (fn [_ _] nil)
-                    user-repository-fixture/save! (fn [_ _] true)]
+                    user-repository-fixture/save! (fn [_ user] user)]
         (let [command {:token "valid-token"
-                      :name "New Name"}
+                       :name "New Name"
+                       :email "new@example.com"}
               result (use-case/update-user user-use-case command)]
-          (is (f/ok? result))
-          (is (= test-uuid (:user-uuid result))))))
+          (is (= test-uuid (:user-uuid result)))
+          (is (= "new@example.com" (:email result)))
+          (is (= "New Name" (:name result))))))
 
-    (testing "존재하지 않는 사용자 업데이트 시도"
-      (with-redefs [token-gateway-fixture/verify (fn [_ _] 999)
+    (testing "이미 존재하는 이메일로 업데이트 시도"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "old@example.com"
+                       :name "Old Name"})
+                    user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:uuid #uuid "660e8400-e29b-41d4-a716-446655440000"
+                       :email "existing@example.com"})]
+        (let [command {:token "valid-token"
+                       :email "existing@example.com"}
+              result (use-case/update-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :update-error/email-already-exists (f/message result))))))
+
+    (testing "존재하지 않는 사용자"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
                     user-repository-fixture/find-by-id (fn [_ _] nil)]
         (let [command {:token "valid-token"
-                      :name "New Name"}
+                       :name "New Name"}
               result (use-case/update-user user-use-case command)]
           (is (f/failed? result))
           (is (= :update-error/user-not-found (f/message result))))))
 
-    (testing "유효하지 않은 토큰으로 업데이트 시도"
-      (with-redefs [token-gateway-fixture/verify (fn [_ _] nil)]
-        (let [command {:token "invalid-token"
-                      :name "New Name"}
-              result (use-case/update-user user-use-case command)]
-          (is (f/failed? result))
-          (is (= :update-error/invalid-token (f/message result))))))
-
-    (testing "비밀번호 업데이트"
-      (with-redefs [token-gateway-fixture/verify (fn [_ _] 1)
+    (testing "탈퇴한 사용자"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
                     user-repository-fixture/find-by-id
                     (fn [_ _] 
                       {:uuid test-uuid
-                       :email "test@example.com"
-                       :name "Test User"})
-                    password-gateway-fixture/hash-password (fn [_ _] "new_hashed_password")
-                    user-repository-fixture/save! (fn [_ _] true)]
+                       :email "old@example.com"
+                       :name "Old Name"
+                       :deleted-at (java.util.Date.)})]
         (let [command {:token "valid-token"
-                      :password "NewValid1!password"}
-              result (use-case/update-user user-use-case command)]
-          (is (f/ok? result))
-          (is (= test-uuid (:user-uuid result))))))
-
-    (testing "유효하지 않은 비밀번호로 업데이트 시도"
-      (with-redefs [token-gateway-fixture/verify (fn [_ _] 1)]
-        (let [command {:token "valid-token"
-                      :password "weak"}
+                       :name "New Name"}
               result (use-case/update-user user-use-case command)]
           (is (f/failed? result))
-          (is (= :update-error/invalid-password (f/message result))))))))
+          (is (= :update-error/withdrawn-user (f/message result))))))))
 
 (deftest update-user-role-test
   (let [with-tx (fn [repo f] (f repo))
