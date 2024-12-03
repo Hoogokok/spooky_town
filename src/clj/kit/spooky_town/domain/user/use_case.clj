@@ -174,24 +174,19 @@
          {:token reset-token}))))
 
   (reset-password [_ {:keys [token new-password]}]
-    (f/attempt-all
-     [user-uuid (or (token-gateway/verify token-gateway token)
-                    (f/fail :password-reset/invalid-token))
-      password' (or (value/create-password new-password)
-                   (f/fail :password-reset/invalid-password))
-      hashed-password (or (password-gateway/hash-password password-gateway password')
-                         (f/fail :password-reset/password-hashing-failed))
-      result (with-tx user-repository
-               (fn [repo]
-                 (f/attempt-all
-                  [user (or (find-by-id repo user-uuid)
-                           (f/fail :password-reset/user-not-found))
-                   updated-user (entity/update-password user hashed-password)
-                   _ (save! repo updated-user)]
-                  true)))
-      _ (token-gateway/revoke-token token-gateway token)]
-     {:success true}))
-  
+    (with-tx user-repository
+      (fn [repo]
+        (f/attempt-all
+         [user-uuid (token-gateway/verify token-gateway token)
+          user (or (find-by-uuid repo user-uuid)
+                  (f/fail :password-reset/user-not-found))
+          _ (when (:deleted-at user)
+              (f/fail :password-reset/withdrawn-user))
+          hashed-password (password-gateway/hash-password password-gateway new-password)
+          updated-user (assoc user :password hashed-password)
+          saved-user (save! repo updated-user)]
+         {:user-uuid (:uuid saved-user)}))))
+
   (init [this]
     (event/subscribe event-subscriber
                :role-request/approved

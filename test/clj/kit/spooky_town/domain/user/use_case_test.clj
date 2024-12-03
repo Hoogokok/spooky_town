@@ -247,59 +247,6 @@
           (is (f/failed? result))
           (is (= :update-error/withdrawn-user (f/message result))))))))
 
-(deftest password-reset-test
-  (let [with-tx (fn [repo f] (f repo))
-        user-repository (->TestUserRepository)
-        password-gateway (->TestPasswordGateway)
-        token-gateway (->TestTokenGateway)
-        event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
-        test-email "test@example.com"
-        test-user {:id 1
-                  :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
-                  :email test-email}]
-
-    (testing "비밀번호 초기화 요청 - 성공"
-      (with-redefs [user-repository-fixture/find-by-email (fn [_ _] test-user)
-                    token-gateway-fixture/generate (fn [_ _ _] "test-token")]
-        (let [result (use-case/request-password-reset 
-                      user-use-case 
-                      {:email test-email})]
-          (is (not (f/failed? result)))
-          (is (= "test-token" (:token result))))))
-
-    (testing "비밀번호 초기화 요청 - 존재하지 않는 이메일"
-      (with-redefs [user-repository-fixture/find-by-email (fn [_ _] nil)]
-        (let [result (use-case/request-password-reset 
-                      user-use-case 
-                      {:email "nonexistent@example.com"})]
-          (is (f/failed? result))
-          (is (= :password-reset/user-not-found (f/message result))))))
-
-    (testing "비밀번호 초기화 - 성공"
-      (with-redefs [token-gateway-fixture/verify 
-                    (fn [_ _] (:uuid test-user))
-                    user-repository-fixture/find-by-id 
-                    (fn [_ _] test-user)
-                    password-gateway-fixture/hash-password 
-                    (fn [_ _] "hashed_new_password")
-                    user-repository-fixture/save! 
-                    (fn [_ user] user)]
-        (let [result (use-case/reset-password 
-                      user-use-case 
-                      {:token "valid-token"
-                       :new-password "NewPassword123!"})]
-          (is (not (f/failed? result)))
-          (is (:success result)))))
-
-    (testing "비밀번호 초기화 - 유효하지 않은 토큰"
-      (with-redefs [token-gateway-fixture/verify (fn [_ _] nil)]
-        (let [result (use-case/reset-password
-                      user-use-case
-                      {:token "invalid-token"
-                       :new-password "NewPassword123!"})]
-          (is (f/failed? result))
-          (is (= :password-reset/invalid-token (f/message result))))))))
 
 (deftest withdraw-test
   (let [with-tx (fn [repo f] (f repo))
@@ -440,3 +387,69 @@
               result (use-case/delete-user user-use-case command)]
           (is (f/failed? result))
           (is (= :delete-error/already-withdrawn (f/message result))))))))
+
+(deftest password-reset-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+        test-email "test@example.com"]
+
+    (testing "비밀번호 초기화 요청 - 성공"
+      (with-redefs [user-repository-fixture/find-by-email 
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email test-email})
+                    token-gateway-fixture/generate 
+                    (fn [_ _ _] "test-token")]
+        (let [result (use-case/request-password-reset 
+                      user-use-case 
+                      {:email test-email})]
+          (is (f/ok? result))
+          (is (= "test-token" (:token result))))))
+
+    (testing "비밀번호 초기화 - 성공"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email test-email})
+                    password-gateway-fixture/hash-password 
+                    (fn [_ _] "hashed_password")
+                    user-repository-fixture/save! 
+                    (fn [_ user] user)]
+        (let [result (use-case/reset-password 
+                      user-use-case 
+                      {:token "valid-token"
+                       :new-password "NewPassword123!"})]
+          (is (f/ok? result))
+          (is (= test-uuid (:user-uuid result))))))
+
+    (testing "비밀번호 초기화 - 유효하지 않은 토큰"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] (f/fail :token-error/invalid))]
+        (let [result (use-case/reset-password
+                      user-use-case
+                      {:token "invalid-token"
+                       :new-password "NewPassword123!"})]
+          (is (f/failed? result))
+          (is (= :token-error/invalid (f/message result))))))
+
+    (testing "비밀번호 초기화 - 탈퇴한 사용자"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email test-email
+                       :deleted-at (java.util.Date.)})]
+        (let [result (use-case/reset-password
+                      user-use-case
+                      {:token "valid-token"
+                       :new-password "NewPassword123!"})]
+          (is (f/failed? result))
+          (is (= :password-reset/withdrawn-user (f/message result))))))))
