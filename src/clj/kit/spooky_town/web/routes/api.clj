@@ -84,6 +84,23 @@
                  :summary "새로운 사용자를 등록합니다"
                  :description "이메일, 이름, 비밀번호로 새로운 사용자를 등록합니다."
                  :swagger {:tags ["users"]}}}]
+     ["/:id/role"
+      {:put {:handler (fn [req]
+                        (user/update-user-role
+                         (-> req
+                             (assoc :user-use-case user-use-case)
+                             (assoc-in [:body-params :user-uuid] (get-in req [:path-params :id])))))
+             :parameters {:path {:id string?}
+                          :body {:role string?}}
+             :responses {200 {:body {:user-uuid string?
+                                     :roles #{string?}}}
+                         400 {:body {:error string?}}
+                         404 {:body {:error string?}}
+                         500 {:body {:error string?}}}
+             :summary "사용자 역할 업데이트"
+             :description "사용자의 역할을 업데이트합니다."
+             :swagger {:tags ["users"]
+                       :security [{:bearer []}]}}}]
      ["/me"
       ["/withdraw"
        {:delete {:handler (fn [req]
