@@ -17,6 +17,9 @@
 (defn find-id-by-uuid [_ _]
   (throw (ex-info "Not implemented" {})))
 
+(defn mark-as-withdrawn [_ _]
+  (throw (ex-info "Not implemented" {})))
+
 (defrecord TestUserRepository []
 
   UserRepository
@@ -24,4 +27,5 @@
   (find-by-id [this id] (find-by-id this id))
   (find-by-email [this email] (find-by-email this email))
   (find-by-uuid [this uuid] (find-by-uuid this uuid))
-  (find-id-by-uuid [this uuid] (find-id-by-uuid this uuid)))
+  (find-id-by-uuid [this uuid] (find-id-by-uuid this uuid))
+  (mark-as-withdrawn [this user] (mark-as-withdrawn this user)))

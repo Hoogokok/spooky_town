@@ -234,3 +234,60 @@ user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-rep
                        :new-password "NewPassword123!"})]
           (is (f/failed? result))
           (is (= :password-reset/invalid-token (f/message result))))))))
+
+(deftest withdraw-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
+
+    (testing "유효한 비밀번호로 회원 탈퇴"
+      (with-redefs [password-gateway-fixture/verify-password (fn [_ _ _] true)
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :hashed-password "hashed_password"})
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [command {:user-uuid test-uuid
+                      :password "Valid1!password"
+                      :reason "테스트 탈퇴"}
+              result (use-case/withdraw user-use-case command)]
+          (is (f/ok? result))
+          (is (:success result)))))
+
+    (testing "존재하지 않는 사용자"
+      (with-redefs [user-repository-fixture/find-by-uuid (fn [_ _] nil)]
+        (let [command {:user-uuid test-uuid
+                      :password "Valid1!password"}
+              result (use-case/withdraw user-use-case command)]
+          (is (f/failed? result))
+          (is (= :withdrawal-error/user-not-found (f/message result))))))
+
+    (testing "이미 탈퇴한 사용자"
+      (with-redefs [user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :deleted-at (java.util.Date.)})]
+        (let [command {:user-uuid test-uuid
+                      :password "Valid1!password"}
+              result (use-case/withdraw user-use-case command)]
+          (is (f/failed? result))
+          (is (= :withdrawal-error/already-withdrawn (f/message result))))))
+
+    (testing "잘못된 비밀번호로 탈퇴 시도"
+      (with-redefs [password-gateway-fixture/verify-password (fn [_ _ _] false)
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :hashed-password "hashed_password"})]
+        (let [command {:user-uuid test-uuid
+                      :password "WrongPassword1!"}
+              result (use-case/withdraw user-use-case command)]
+          (is (f/failed? result))
+          (is (= :withdrawal-error/invalid-credentials (f/message result))))))))
