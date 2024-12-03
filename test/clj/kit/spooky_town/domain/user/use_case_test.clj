@@ -291,3 +291,86 @@ user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-rep
               result (use-case/withdraw user-use-case command)]
           (is (f/failed? result))
           (is (= :withdrawal-error/invalid-credentials (f/message result))))))))
+
+(deftest delete-user-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+        user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"]
+
+    (testing "관리자가 유효한 사용자 탈퇴 처리"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid)
+                        {:uuid admin-uuid
+                         :email "admin@example.com"
+                         :roles #{:admin}}
+                        {:uuid user-uuid
+                         :email "user@example.com"
+                         :roles #{:user}}))
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :reason "관리자에 의한 탈퇴"}
+              result (use-case/delete-user user-use-case command)]
+          (is (f/ok? result))
+          (is (:success result)))))
+
+    (testing "관리자 권한이 없는 경우"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ _]
+                      {:uuid admin-uuid
+                       :email "user@example.com"
+                       :roles #{:user}})]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :reason "권한 없는 탈퇴 시도"}
+              result (use-case/delete-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :delete-error/insufficient-permissions (f/message result))))))
+
+    (testing "존재하지 않는 관리자"
+      (with-redefs [user-repository-fixture/find-by-id (fn [_ _] nil)]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :reason "존재하지 않는 관리자"}
+              result (use-case/delete-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :delete-error/admin-not-found (f/message result))))))
+
+    (testing "존재하지 않는 사용자"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid)
+                        {:uuid admin-uuid
+                         :email "admin@example.com"
+                         :roles #{:admin}}
+                        nil))]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :reason "존재하지 않는 사용자"}
+              result (use-case/delete-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :delete-error/user-not-found (f/message result))))))
+
+    (testing "이미 탈퇴한 사용자"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid)
+                        {:uuid admin-uuid
+                         :email "admin@example.com"
+                         :roles #{:admin}}
+                        {:uuid user-uuid
+                         :email "user@example.com"
+                         :roles #{:user}
+                         :deleted-at (java.util.Date.)}))]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :reason "이미 탈퇴한 사용자"}
+              result (use-case/delete-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :delete-error/already-withdrawn (f/message result))))))))
