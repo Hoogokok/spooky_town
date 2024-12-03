@@ -246,14 +246,18 @@
     (if-not (#{:registration :password-reset :email-change} purpose)
       (f/fail :email-verification/invalid-purpose)
       (f/attempt-all
-        [token (email-token-gateway/generate-token email-token-gateway email purpose)
+        [user (or (with-tx user-repository
+                    (fn [repo]
+                      (find-by-email repo email)))
+                  (f/fail :email-verification/user-not-found))
+         token (email-token-gateway/generate-token email-token-gateway email purpose)
          _ (case purpose
              :registration (email-gateway/send-verification-email email-gateway email token)
              :password-reset (email-gateway/send-password-reset-email email-gateway email token)
              :email-change (email-gateway/send-email-change-verification email-gateway email token))]
         {:token token}
         (f/when-failed [e]
-          (f/fail :email-verification/failed)))))
+          e))))
 
   (verify-email [_ token]
     (if (empty? token)

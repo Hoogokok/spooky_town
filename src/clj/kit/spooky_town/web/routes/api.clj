@@ -84,6 +84,33 @@
                  :summary "새로운 사용자를 등록합니다"
                  :description "이메일, 이름, 비밀번호로 새로운 사용자를 등록합니다."
                  :swagger {:tags ["users"]}}}]
+     
+     ["/register"
+      ["/verify"
+       {:post {:handler (fn [req]
+                          (user/request-email-verification
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:email string?}}
+               :responses {200 {:body {:message string?}}
+                           400 {:body {:error string?}}
+                           404 {:body {:error string?}}
+                           429 {:body {:error string?}}}
+               :summary "회원가입 이메일 인증 요청"
+               :description "회원가입을 위한 이메일 인증 링크를 발송합니다."
+               :swagger {:tags ["users"]}}}]
+      
+      ["/verify/confirm"
+       {:post {:handler (fn [req]
+                          (user/verify-email
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:token string?}}
+               :responses {200 {:body {:message string?}}
+                           400 {:body {:error string?}}
+                           404 {:body {:error string?}}}
+               :summary "회원가입 이메일 인증 완료"
+               :description "이메일 인증 토큰을 확인하고 회원가입을 완료합니다."
+               :swagger {:tags ["users"]}}}]]
+     
      ["/:id/role"
       {:put {:handler (fn [req]
                         (user/update-user-role
