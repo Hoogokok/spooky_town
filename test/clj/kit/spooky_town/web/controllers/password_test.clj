@@ -7,6 +7,8 @@
    [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
    [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
    [kit.spooky-town.domain.user.use-case :refer [->UserUseCaseImpl]]
+   [kit.spooky-town.domain.user.test.email-gateway-fixture :as email-gateway-fixture :refer [->TestEmailGateway]]
+   [kit.spooky-town.domain.user.test.email-token-gateway-fixture :as email-token-gateway-fixture :refer [->TestEmailTokenGateway]]
    [kit.spooky-town.web.controllers.password :as password]))
 
 (deftest request-password-reset-test
@@ -15,7 +17,9 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway)
         test-email "test@example.com"
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
@@ -95,7 +99,9 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
     (testing "비밀번호 초기화 - 성공"

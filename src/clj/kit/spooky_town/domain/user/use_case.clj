@@ -4,6 +4,8 @@
    [integrant.core :as ig]
    [kit.spooky-town.domain.event :as event]
    [kit.spooky-town.domain.user.entity :as entity :refer [admin?]]
+   [kit.spooky-town.domain.user.gateway.email :as email-gateway]
+   [kit.spooky-town.domain.user.gateway.email-token :as email-token-gateway]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
@@ -24,14 +26,22 @@
     "사용자의 역할을 업데이트합니다.")
   (init [this]
     "이벤트 구독을 초기화합니다.")
- (request-password-reset [this command]
-                         "비밀번호 초기화를 요청합니다.")
- (reset-password [this command]
-                 "비밀번호를 초기화합니다.")
+  (request-password-reset [this command]
+    "비밀번호 초기화를 요청합니다.")
+  (reset-password [this command]
+    "비밀번호를 초기화합니다.")
   (withdraw [this command]
     "사용자가 회원 탈퇴를 진행합니다.")
   (delete-user [this command]
-    "관리자가 사용자를 탈퇴 처리합니다."))
+    "관리자가 사용자를 탈퇴 처리합니다.")
+  (request-email-verification [this email purpose]
+    "이메일 인증을 요청합니다. 
+     purpose는 :registration, :password-reset, :email-change 중 하나입니다.")
+  (verify-email [this token]
+    "토큰을 검증하고 이메일 인증을 완료합니다.
+     성공 시 이메일과 용도를 반환합니다.")
+  (check-email-verification-status [this email]
+    "해당 이메일의 인증 상태를 확인합니다."))
 
 (def token-expires-in-sec (* 60 60 24))
 
@@ -45,7 +55,7 @@
 
 (defrecord DeleteUserCommand [admin-uuid user-uuid reason])
 
-(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber]
+(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway]
   UserUseCase
   (register-user [_ {:keys [email name password]}]
     (f/attempt-all
@@ -229,8 +239,36 @@
                    withdrawn-user (entity/mark-as-withdrawn user reason)
                    _ (save! repo withdrawn-user)]
                   true)))]
-     {:success true})))
+     {:success true}))
+
+  (request-email-verification [_ email purpose]
+    (if-not (#{:registration :password-reset :email-change} purpose)
+      (f/fail :email-verification/invalid-purpose)
+      (f/attempt-all
+        [token (email-token-gateway/generate-token email-token-gateway email purpose)
+         _ (case purpose
+             :registration (email-gateway/send-verification-email email-gateway email token)
+             :password-reset (email-gateway/send-password-reset-email email-gateway email token)
+             :email-change (email-gateway/send-email-change-verification email-gateway email token))]
+        {:token token}
+        (f/when-failed [e]
+          (f/fail :email-verification/failed)))))
+
+  (verify-email [_ token]
+    (if (empty? token)
+      (f/fail :email-verification/invalid-token)
+      (f/attempt-all
+        [{:keys [email purpose] :as result} (email-token-gateway/verify-token email-token-gateway token)]
+        result
+        (f/when-failed [e]
+          (f/fail :email-verification/invalid-token)))))
+
+  (check-email-verification-status [_ email]
+    (if (empty? email)
+      (f/fail :email-verification/invalid-email)
+      ;; TODO: 이메일 인증 상태 저장/조회 로직 구현 필요
+      (f/fail :email-verification/not-implemented))))
 
 (defmethod ig/init-key :domain/user-use-case
-  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber]}]
-  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber))
+  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway]}]
+  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway))
