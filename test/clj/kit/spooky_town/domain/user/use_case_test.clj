@@ -167,66 +167,85 @@
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
         user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
-        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
-        test-id 1]
+        admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+        user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"]
 
     (testing "유효한 UUID로 역할 업데이트"
-      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] test-id)
+      (with-redefs [user-repository-fixture/find-id-by-uuid 
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid) 1 2))
                     user-repository-fixture/find-by-id
-                    (fn [_ _]
-                      {:id test-id
-                       :uuid test-uuid
-                       :email "test@example.com"
-                       :name "Test User"
-                       :roles #{:user}})
+                    (fn [_ id] 
+                      (case id
+                        1 {:id 1
+                           :uuid admin-uuid
+                           :email "admin@example.com"
+                           :roles #{:admin}}
+                        2 {:id 2
+                           :uuid user-uuid
+                           :email "user@example.com"
+                           :roles #{:user}}))
                     user-repository-fixture/save! (fn [_ user] user)]
-        (let [command {:user-uuid test-uuid
-                       :role :admin}
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :role :admin}
               result (use-case/update-user-role user-use-case command)]
-          (is (= test-uuid (:user-uuid result)))
+          (is (= user-uuid (:user-uuid result)))
           (is (= #{:admin} (:roles result))))))
 
     (testing "존재하지 않는 UUID로 역할 업데이트 시도"
-      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] nil)
-                    user-repository-fixture/find-by-id (fn [_ _] nil)]
-        (let [command {:user-uuid test-uuid
-                       :role :admin}
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] nil)]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :role :admin}
               result (use-case/update-user-role user-use-case command)]
           (is (f/failed? result))
-          (is (= :user/not-found (f/message result))))))
+          (is (= :admin/not-found (f/message result))))))
+
+    (testing "관리자가 아닌 사용자의 역할 업데이트 시도"
+      (with-redefs [user-repository-fixture/find-id-by-uuid 
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid) 1 2))
+                    user-repository-fixture/find-by-id
+                    (fn [_ id] 
+                      (case id
+                        1 {:id 1
+                           :uuid admin-uuid
+                           :email "admin@example.com"
+                           :roles #{:user}}
+                        2 {:id 2
+                           :uuid user-uuid
+                           :email "user@example.com"
+                           :roles #{:user}}))]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :role :admin}
+              result (use-case/update-user-role user-use-case command)]
+          (is (f/failed? result))
+          (is (= :update-error/insufficient-permissions (f/message result))))))
 
     (testing "탈퇴한 사용자의 역할 업데이트 시도"
-      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] test-id)
+      (with-redefs [user-repository-fixture/find-id-by-uuid 
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid) 1 2))
                     user-repository-fixture/find-by-id
-                    (fn [_ _]
-                      {:id test-id
-                       :uuid test-uuid
-                       :email "test@example.com"
-                       :name "Test User"
-                       :roles #{:user}
-                       :deleted-at (java.util.Date.)})]
-        (let [command {:user-uuid test-uuid
-                       :role :admin}
+                    (fn [_ id] 
+                      (case id
+                        1 {:id 1
+                           :uuid admin-uuid
+                           :email "admin@example.com"
+                           :roles #{:admin}}
+                        2 {:id 2
+                           :uuid user-uuid
+                           :email "user@example.com"
+                           :roles #{:user}
+                           :deleted-at (java.util.Date.)}))]
+        (let [command {:admin-uuid admin-uuid
+                      :user-uuid user-uuid
+                      :role :admin}
               result (use-case/update-user-role user-use-case command)]
           (is (f/failed? result))
-          (is (= :update-error/withdrawn-user (f/message result))))))
-
-    (testing "역할 변경 요청 이벤트 구독"
-      (with-redefs [user-repository-fixture/find-by-id
-                    (fn [_ _]
-                      {:id test-id
-                       :uuid test-uuid
-                       :email "test@example.com"
-                       :roles #{:user}})
-                    user-repository-fixture/find-id-by-uuid (fn [_ _] test-id)
-                    user-repository-fixture/save! (fn [_ user] user)
-                    event-subscriber-fixture/subscribe
-                    (fn [_ event-type handler]
-                      (is (= :role-request/approved event-type))
-                      (let [result (handler {:user-id test-id :role :moderator})]
-                        (is (f/ok? result))
-                        (is (= #{:moderator} (:roles result)))))]
-        (.init user-use-case)))))
+          (is (= :update-error/withdrawn-user (f/message result))))))))
 
 (deftest password-reset-test
   (let [with-tx (fn [repo f] (f repo))

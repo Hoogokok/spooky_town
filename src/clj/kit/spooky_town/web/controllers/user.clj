@@ -112,13 +112,18 @@
       (response/ok result))))
 
 (defn update-user-role
-  [{:keys [body-params user-use-case auth-user]}]
+  [{:keys [body-params path-params user-use-case auth-user]}]
   (let [result (use-case/update-user-role
                 user-use-case
-                {:user-uuid (:user-uuid body-params)
+                {:admin-uuid (:uuid auth-user)
+                 :user-uuid (parse-uuid (:id path-params))
                  :role (:role body-params)})]
     (if (f/failed? result)
       (case (f/message result)
+        :admin/not-found
+        (response/not-found {:error "관리자를 찾을 수 없습니다"})
+        :update-error/insufficient-permissions
+        (response/forbidden {:error "권한이 부족합니다"})
         :user/not-found
         (response/not-found {:error "사용자를 찾을 수 없습니다"})
         :update-error/withdrawn-user

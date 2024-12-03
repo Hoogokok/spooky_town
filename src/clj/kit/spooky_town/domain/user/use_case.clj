@@ -134,20 +134,26 @@
       :email (:email result)
       :name (:name result)}))
 
-  (update-user-role [_ {:keys [user-uuid role]}]
+  (update-user-role [_ {:keys [admin-uuid user-uuid role]}]
     (with-tx user-repository
-      (fn [_]
+      (fn [repo]
         (f/attempt-all
-          [user-id (or (find-id-by-uuid user-repository user-uuid)
+         [admin-id (or (find-id-by-uuid repo admin-uuid)
+                      (f/fail :admin/not-found))
+          user-id (or (find-id-by-uuid repo user-uuid)
                       (f/fail :user/not-found))
-           user (or (find-by-id user-repository user-id)
-                   (f/fail :user/not-found))
-           _ (when (:deleted-at user)
-               (f/fail :update-error/withdrawn-user))
-           updated-user (assoc user :roles #{role})
-           saved-user (save! user-repository updated-user)]
-          {:user-uuid (:uuid saved-user)
-           :roles (:roles saved-user)}))))
+          [admin user] [(find-by-id repo admin-id)
+                       (find-by-id repo user-id)]
+          _ (when (or (nil? admin) (nil? user))
+              (f/fail :user/not-found))
+          _ (when-not (admin? admin)
+              (f/fail :update-error/insufficient-permissions))
+          _ (when (:deleted-at user)
+              (f/fail :update-error/withdrawn-user))
+          updated-user (assoc user :roles #{role})
+          saved-user (save! repo updated-user)]
+         {:user-uuid (:uuid saved-user)
+          :roles (:roles saved-user)}))))
 
   (request-password-reset [_ {:keys [email]}]
     (f/attempt-all
