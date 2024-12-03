@@ -8,6 +8,7 @@
    [kit.spooky-town.domain.user.gateway.email-token :as email-token-gateway]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
+   [kit.spooky-town.domain.user.gateway.email-verification :as email-verification-gateway]
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
                                                             find-by-id
                                                             find-by-uuid
@@ -55,7 +56,7 @@
 
 (defrecord DeleteUserCommand [admin-uuid user-uuid reason])
 
-(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway]
+(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway]
   UserUseCase
   (register-user [_ {:keys [email name password]}]
     (f/attempt-all
@@ -258,7 +259,10 @@
     (if (empty? token)
       (f/fail :email-verification/invalid-token)
       (f/attempt-all
-        [{:keys [email purpose] :as result} (email-token-gateway/verify-token email-token-gateway token)]
+        [{:keys [email purpose] :as result} (email-token-gateway/verify-token 
+                                            email-token-gateway token)
+         _ (email-verification-gateway/save-verification-status! 
+             email-verification-gateway email purpose :verified)]
         result
         (f/when-failed [e]
           (f/fail :email-verification/invalid-token)))))
@@ -266,9 +270,13 @@
   (check-email-verification-status [_ email]
     (if (empty? email)
       (f/fail :email-verification/invalid-email)
-      ;; TODO: 이메일 인증 상태 저장/조회 로직 구현 필요
-      (f/fail :email-verification/not-implemented))))
+      (f/attempt-all
+        [status (email-verification-gateway/get-verification-status 
+                 email-verification-gateway email :registration)]
+        (if status
+          {:email email :status status}
+          (f/fail :email-verification/not-verified))))))
 
 (defmethod ig/init-key :domain/user-use-case
-  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway]}]
-  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway))
+  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway]}]
+  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway))
