@@ -9,6 +9,7 @@
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
    [kit.spooky-town.web.controllers.role-request :as role-request]
+   [kit.spooky-town.web.controllers.password :as password]
    [kit.spooky-town.web.middleware.auth :as auth] 
    [reitit.swagger :as swagger]))
 
@@ -36,7 +37,7 @@
                 auth/wrap-auth-required]})
 
 ;; Routes
-(defn api-routes [{:keys [role-request-use-case tx-manager] :as opts}]
+(defn api-routes [{:keys [role-request-use-case user-use-case tx-manager] :as opts}]
   ["/api"
    route-data
    ["/v1"
@@ -99,7 +100,32 @@
              :summary "역할 변경 요청 거절"
              :description "관리자가 대기 중인 역할 변경 요청을 거절합니다."
              :swagger {:tags ["role-requests"]
-                       :security [{:bearer []}]}}}]]]])
+                       :security [{:bearer []}]}}}]
+     
+     
+       ["/users/password"
+         ["/reset"
+          {:post {:handler (fn [req]
+                             (password/request-reset
+                              (assoc req :user-use-case user-use-case)))
+                  :parameters {:body {:email string?}}
+                  :responses {200 {:body {:token string?}}
+                              400 {:body {:error string?}}}
+                  :summary "비밀번호 초기화 요청"
+                  :description "이메일을 통해 비밀번호 초기화를 요청합니다."
+                  :swagger {:tags ["users"]}}}]
+     
+         ["/reset/confirm"
+          {:post {:handler (fn [req]
+                             (password/reset-password
+                              (assoc req :user-use-case user-use-case)))
+                  :parameters {:body {:token string?
+                                      :new-password string?}}
+                  :responses {200 {:body {:success boolean?}}
+                              400 {:body {:error string?}}}
+                  :summary "비밀번호 초기화 완료"
+                  :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
+                  :swagger {:tags ["users"]}}}]]]]])
 
 (derive :reitit.routes/api :reitit/routes)
 

@@ -113,7 +113,8 @@
  :reitit.routes/api
  {:base-path ""
   :tx-manager #ig/ref :db/tx-manager
-  :role-request-use-case #ig/ref :domain/role-request-use-case}
+  :role-request-use-case #ig/ref :domain/role-request-use-case
+  :user-use-case #ig/ref :domain/user-use-case}
 
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}

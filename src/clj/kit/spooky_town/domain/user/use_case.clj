@@ -20,7 +20,11 @@
   (update-user-role [this command]
     "사용자의 역할을 업데이트합니다.")
   (init [this]
-    "이벤트 구독을 초기화합니다."))
+    "이벤트 구독을 초기화합니다.")
+ (request-password-reset [this command]
+                         "비밀번호 초기화를 요청합니다.")
+ (reset-password [this command]
+                 "비밀번호를 초기화합니다."))
 
 (def token-expires-in-sec (* 60 60 24))
 
@@ -123,13 +127,43 @@
            saved-user (save! user-repository updated-user)]
           saved-user))))
 
-  ;; 이벤트 구독 설정을 위한 초기화 함수
+  (request-password-reset [_ {:keys [email]}]
+    (f/attempt-all
+     [email' (or (value/create-email email)
+                 (f/fail :password-reset/invalid-email))
+      user (or (with-tx user-repository
+                (fn [repo]
+                  (find-by-email repo email')))
+               (f/fail :password-reset/user-not-found))
+      token-ttl (java.time.Duration/ofHours 24)
+      reset-token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
+     {:token reset-token})) 
+  
+  (reset-password [_ {:keys [token new-password]}]
+    (f/attempt-all
+     [user-uuid (or (token-gateway/verify token-gateway token)
+                    (f/fail :password-reset/invalid-token))
+      password' (or (value/create-password new-password)
+                   (f/fail :password-reset/invalid-password))
+      hashed-password (or (password-gateway/hash-password password-gateway password')
+                         (f/fail :password-reset/password-hashing-failed))
+      result (with-tx user-repository
+               (fn [repo]
+                 (f/attempt-all
+                  [user (or (find-by-id repo user-uuid)
+                           (f/fail :password-reset/user-not-found))
+                   updated-user (entity/update-password user hashed-password)
+                   _ (save! repo updated-user)]
+                  true)))
+      _ (token-gateway/revoke-token token-gateway token)]
+     {:success true}))
+  
   (init [this]
+    "이벤트 구독을 초기화합니다."
     (event/subscribe event-subscriber
                     :role-request/approved
                     (fn [{:keys [user-id role]}]
                       (update-user-role this {:user-id user-id :role role})))))
-
 
 (defmethod ig/init-key :domain/user-use-case
   [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber]}]
