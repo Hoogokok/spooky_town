@@ -3,6 +3,7 @@
    [failjure.core :as f]
    [integrant.core :as ig]
    [kit.spooky-town.domain.event :as event]
+   [kit.spooky-town.domain.role-request.repository.protocol :refer [find-by-uuid]]
    [kit.spooky-town.domain.user.entity :as entity]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
@@ -24,7 +25,9 @@
  (request-password-reset [this command]
                          "비밀번호 초기화를 요청합니다.")
  (reset-password [this command]
-                 "비밀번호를 초기화합니다."))
+                 "비밀번호를 초기화합니다.")
+  (withdraw [this command]
+    "사용자가 회원 탈퇴를 진행합니다."))
 
 (def token-expires-in-sec (* 60 60 24))
 
@@ -34,6 +37,7 @@
 
 (defrecord UpdateUserCommand [token name email password])
 
+(defrecord WithdrawCommand [user-uuid password reason])
 (defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber]
   UserUseCase
   (register-user [_ {:keys [email name password]}]
@@ -163,7 +167,27 @@
     (event/subscribe event-subscriber
                     :role-request/approved
                     (fn [{:keys [user-id role]}]
-                      (update-user-role this {:user-id user-id :role role})))))
+                      (update-user-role this {:user-id user-id :role role}))))
+
+  (withdraw [_ {:keys [user-uuid password reason]}]
+    (f/attempt-all
+     [password' (or (value/create-password password)
+                   (f/fail :withdrawal-error/invalid-password))
+      result (with-tx user-repository
+               (fn [repo]
+                 (f/attempt-all
+                  [user (or (find-by-uuid repo user-uuid)
+                           (f/fail :withdrawal-error/user-not-found))
+                   _ (when (:deleted-at user)
+                       (f/fail :withdrawal-error/already-withdrawn))
+                   _ (or (password-gateway/verify-password password-gateway
+                                                         password'
+                                                         (:hashed-password user))
+                         (f/fail :withdrawal-error/invalid-credentials))
+                   withdrawn-user (entity/mark-as-withdrawn user reason)
+                   _ (save! repo withdrawn-user)]
+                  true)))]
+     {:success true})))
 
 (defmethod ig/init-key :domain/user-use-case
   [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber]}]

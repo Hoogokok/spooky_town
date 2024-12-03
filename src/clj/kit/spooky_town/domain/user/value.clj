@@ -63,3 +63,6 @@
 
 (defn update-timestamp [entity]
   (assoc entity :updated-at (create-timestamp)))
+
+(s/def ::deleted-at inst?)
+(s/def ::withdrawal-reason (s/nilable string?))
