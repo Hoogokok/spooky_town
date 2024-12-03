@@ -156,17 +156,23 @@
           :roles (:roles saved-user)}))))
 
   (request-password-reset [_ {:keys [email]}]
-    (f/attempt-all
-     [email' (or (value/create-email email)
-                 (f/fail :password-reset/invalid-email))
-      user (or (with-tx user-repository
-                (fn [repo]
-                  (find-by-email repo email')))
-               (f/fail :password-reset/user-not-found))
-      token-ttl (java.time.Duration/ofHours 24)
-      reset-token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
-     {:token reset-token})) 
-  
+    (with-tx user-repository
+      (fn [repo]
+        (f/attempt-all
+         [email' (or (value/create-email email)
+                    (f/fail :password-reset/invalid-email))
+          user (or (find-by-email repo email')
+                  (f/fail :password-reset/user-not-found))
+          _ (when (:deleted-at user)
+              (f/fail :password-reset/withdrawn-user))
+          _ (when-let [existing-token (token-gateway/find-valid-token token-gateway (:uuid user))]
+              (f/fail :password-reset/token-already-exists))
+          _ (when (token-gateway/check-rate-limit token-gateway email' :password-reset)
+              (f/fail :password-reset/rate-limit-exceeded))
+          token-ttl (java.time.Duration/ofHours 24)
+          reset-token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
+         {:token reset-token}))))
+
   (reset-password [_ {:keys [token new-password]}]
     (f/attempt-all
      [user-uuid (or (token-gateway/verify token-gateway token)
