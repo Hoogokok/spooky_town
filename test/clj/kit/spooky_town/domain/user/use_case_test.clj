@@ -166,32 +166,61 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-id 1]
 
-    (testing "사용자 역할 업데이트"
+    (testing "유효한 사용자 ID로 역할 업데이트"
       (with-redefs [user-repository-fixture/find-by-id
-                    (fn [_ _] {:id 1 :email "test@example.com" :roles #{:user}})
-                    user-repository-fixture/save! (fn [_ user] user)
-                    event-subscriber-fixture/subscribe (fn [_ _ _] (fn [_ _] ()))] 
-        (let [result (use-case/update-user-role user-use-case {:user-id 1 :role :moderator})]
-          (is (f/ok? result))
-          (is (= #{:moderator} (:roles result))))))
+                    (fn [_ _]
+                      {:id test-id
+                       :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :name "Test User"
+                       :roles #{:user}})
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [command {:user-id test-id
+                       :role :admin}
+              result (use-case/update-user-role user-use-case command)]
+          (is (= #uuid "550e8400-e29b-41d4-a716-446655440000" (:user-uuid result)))
+          (is (= #{:admin} (:roles result))))))
 
-    (testing "존재하지 않는 사용자"
+    (testing "존재하지 않는 사용자의 역할 업데이트 시도"
       (with-redefs [user-repository-fixture/find-by-id (fn [_ _] nil)]
-        (let [result (use-case/update-user-role user-use-case {:user-id 999 :role :moderator})]
+        (let [command {:user-id test-id
+                       :role :admin}
+              result (use-case/update-user-role user-use-case command)]
           (is (f/failed? result))
           (is (= :user/not-found (f/message result))))))
 
+    (testing "탈퇴한 사용자의 역할 업데이트 시도"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ _]
+                      {:id test-id
+                       :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :name "Test User"
+                       :roles #{:user}
+                       :deleted-at (java.util.Date.)})]
+        (let [command {:user-id test-id
+                       :role :admin}
+              result (use-case/update-user-role user-use-case command)]
+          (is (f/failed? result))
+          (is (= :update-error/withdrawn-user (f/message result))))))
+
     (testing "역할 변경 요청 이벤트 구독"
       (with-redefs [user-repository-fixture/find-by-id
-                    (fn [_ _] {:id 1 :email "test@example.com" :roles #{:user}})
+                    (fn [_ _]
+                      {:id test-id
+                       :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :roles #{:user}})
                     user-repository-fixture/save! (fn [_ user] user)
-                    event-subscriber-fixture/subscribe (fn [_ event-type handler]
-                                      (is (= :role-request/approved event-type))
-                                      (let [result (handler {:user-id 1 :role :moderator})]
-                                        (is (f/ok? result))
-                                        (is (= #{:moderator} (:roles result)))))]
+                    event-subscriber-fixture/subscribe
+                    (fn [_ event-type handler]
+                      (is (= :role-request/approved event-type))
+                      (let [result (handler {:user-id test-id :role :moderator})]
+                        (is (f/ok? result))
+                        (is (= #{:moderator} (:roles result)))))]
         (.init user-use-case)))))
 
 (deftest password-reset-test

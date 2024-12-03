@@ -138,9 +138,12 @@
         (f/attempt-all
           [user (or (find-by-id user-repository user-id)
                    (f/fail :user/not-found))
+           _ (when (:deleted-at user)
+               (f/fail :update-error/withdrawn-user))
            updated-user (assoc user :roles #{role})
            saved-user (save! user-repository updated-user)]
-          saved-user))))
+          {:user-uuid (:uuid saved-user)
+           :roles (:roles saved-user)}))))
 
   (request-password-reset [_ {:keys [email]}]
     (f/attempt-all
@@ -174,11 +177,10 @@
      {:success true}))
   
   (init [this]
-    "이벤트 구독을 초기화합니다."
     (event/subscribe event-subscriber
-                    :role-request/approved
-                    (fn [{:keys [user-id role]}]
-                      (update-user-role this {:user-id user-id :role role}))))
+               :role-request/approved
+               (fn [{:keys [user-id role]}]
+                 (update-user-role this {:user-id user-id :role role}))))
 
   (withdraw [_ {:keys [user-uuid password reason]}]
     (f/attempt-all
