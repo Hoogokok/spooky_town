@@ -99,11 +99,14 @@
  {:datasource #ig/ref :db.sql/connection
   :tx-manager #ig/ref :db/tx-manager
   :queries #ig/ref :db.sql/queries}
+ 
+ :auth/bcrypt-password-gateway {}
 
  :domain/user-use-case
  {:with-tx #ig/ref :db/tx-manager
   :user-repository #ig/ref :infrastructure/user-repository
-  :event-subscriber #ig/ref :infrastructure/event-bus}
+  :event-subscriber #ig/ref :infrastructure/event-bus
+  :password-gateway #ig/ref :auth/bcrypt-password-gateway}
 
  :domain/role-request-use-case
  {:with-tx #ig/ref :db/tx-manager
