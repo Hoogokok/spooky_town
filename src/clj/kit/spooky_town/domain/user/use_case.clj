@@ -86,9 +86,11 @@
                  (fn [repo]
                    (find-by-email repo email')))
                (f/fail :authentication-error/user-not-found))
+      _ (when (:deleted-at user)
+          (f/fail :authentication-error/withdrawn-user))
       _ (or (password-gateway/verify-password password-gateway
-                                              password'
-                                              (:hashed-password user))
+                                            password'
+                                            (:hashed-password user))
             (f/fail :authentication-error/invalid-credentials))
       token-ttl (java.time.Duration/ofSeconds token-expires-in-sec)
       token (token-gateway/generate token-gateway (:uuid user) token-ttl)]
