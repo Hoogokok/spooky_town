@@ -3,12 +3,12 @@
    [failjure.core :as f]
    [integrant.core :as ig]
    [kit.spooky-town.domain.event :as event]
-   [kit.spooky-town.domain.role-request.repository.protocol :refer [find-by-uuid]]
    [kit.spooky-town.domain.user.entity :as entity]
    [kit.spooky-town.domain.user.gateway.password :as password-gateway]
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
-                                                            find-by-id save!]]
+                                                            find-by-id save!
+                                                            find-by-uuid]]
    [kit.spooky-town.domain.user.value :as value]))
 
 (defprotocol UserUseCase
