@@ -25,6 +25,11 @@
       (fn [tx-query-fn]
         (tx-query-fn (:find-role-request-by-uuid queries) datasource {:uuid uuid}))))
 
+  (find-id-by-uuid [this uuid]
+    (.with-read-only tx-manager
+      (fn [tx-query-fn]
+        (:id (tx-query-fn (:find-role-request-id-by-uuid queries) datasource {:uuid uuid})))))
+
   (find-all-by-user [this user-id]
     ((:find-all-role-requests-by-user queries) datasource {:user_id user-id}))
 

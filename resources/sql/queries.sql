@@ -107,8 +107,14 @@ UPDATE role_requests
 SET status = :status, updated_at = :updated_at, approved_by = :approved_by, rejected_by = :rejected_by, rejection_reason = :rejection_reason
 WHERE id = :id;
 
--- :name get-user-id-by-uuid :? :1
+-- :name find-user-id-by-uuid :? :1
 -- :doc UUID로 사용자 ID 조회
 SELECT id
 FROM users
+WHERE uuid = :uuid
+
+-- :name find-role-request-id-by-uuid :? :1
+-- :doc UUID로 역할 변경 요청 ID 조회
+SELECT id
+FROM role_requests
 WHERE uuid = :uuid

@@ -10,6 +10,9 @@
 (defn find-by-uuid [_ _]
   (throw (ex-info "Not implemented" {})))
 
+(defn find-id-by-uuid [_ _]
+  (throw (ex-info "Not implemented" {})))
+
 (defn find-all-by-user [_ _]
   (throw (ex-info "Not implemented" {})))
 
@@ -26,4 +29,5 @@
   (find-by-uuid [this uuid] (find-by-uuid this uuid))
   (find-all-by-user [this user-id] (find-all-by-user this user-id))
   (find-all-pending [this] (find-all-pending this))
+  (find-id-by-uuid [this uuid] (find-id-by-uuid this uuid))
   (update-request [this request] (update-request this request))) 
