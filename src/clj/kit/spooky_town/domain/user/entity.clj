@@ -29,20 +29,19 @@
 )
 
 (defn create-user
-  "새로운 User Entity를 생성합니다."
-  [{:keys [uuid email name hashed-password created-at]}]
-  (let [user (map->User
-              {:uuid uuid
-               :email email
-               :name name
-               :hashed-password hashed-password
-               :roles (value/create-roles)
-               :created-at created-at
-               :updated-at nil
-               :deleted-at nil
-               :withdrawal-reason nil})]
-    (when (s/valid? ::user user)
-      user)))
+  [{:keys [uuid email name hashed-password roles
+           created-at updated-at deleted-at withdrawal-reason]
+    :or {created-at (value/create-timestamp)
+         roles #{:user}}}]
+  (map->User {:uuid uuid
+              :email email
+              :name name
+              :hashed-password hashed-password
+              :roles roles
+              :created-at created-at
+              :updated-at updated-at
+              :deleted-at deleted-at
+              :withdrawal-reason withdrawal-reason}))
 
 ;; Entity Operations
 (defn update-email
