@@ -167,41 +167,45 @@
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
         user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         test-id 1]
 
-    (testing "유효한 사용자 ID로 역할 업데이트"
-      (with-redefs [user-repository-fixture/find-by-id
+    (testing "유효한 UUID로 역할 업데이트"
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] test-id)
+                    user-repository-fixture/find-by-id
                     (fn [_ _]
                       {:id test-id
-                       :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :uuid test-uuid
                        :email "test@example.com"
                        :name "Test User"
                        :roles #{:user}})
                     user-repository-fixture/save! (fn [_ user] user)]
-        (let [command {:user-id test-id
+        (let [command {:user-uuid test-uuid
                        :role :admin}
               result (use-case/update-user-role user-use-case command)]
-          (is (= #uuid "550e8400-e29b-41d4-a716-446655440000" (:user-uuid result)))
+          (is (= test-uuid (:user-uuid result)))
           (is (= #{:admin} (:roles result))))))
 
-    (testing "존재하지 않는 사용자의 역할 업데이트 시도"
-      (with-redefs [user-repository-fixture/find-by-id (fn [_ _] nil)]
-        (let [command {:user-id test-id
+    (testing "존재하지 않는 UUID로 역할 업데이트 시도"
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] nil)
+                    user-repository-fixture/find-by-id (fn [_ _] nil)]
+        (let [command {:user-uuid test-uuid
                        :role :admin}
               result (use-case/update-user-role user-use-case command)]
           (is (f/failed? result))
           (is (= :user/not-found (f/message result))))))
 
     (testing "탈퇴한 사용자의 역할 업데이트 시도"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] test-id)
+                    user-repository-fixture/find-by-id
                     (fn [_ _]
                       {:id test-id
-                       :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :uuid test-uuid
                        :email "test@example.com"
                        :name "Test User"
                        :roles #{:user}
                        :deleted-at (java.util.Date.)})]
-        (let [command {:user-id test-id
+        (let [command {:user-uuid test-uuid
                        :role :admin}
               result (use-case/update-user-role user-use-case command)]
           (is (f/failed? result))
@@ -211,9 +215,10 @@
       (with-redefs [user-repository-fixture/find-by-id
                     (fn [_ _]
                       {:id test-id
-                       :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :uuid test-uuid
                        :email "test@example.com"
                        :roles #{:user}})
+                    user-repository-fixture/find-id-by-uuid (fn [_ _] test-id)
                     user-repository-fixture/save! (fn [_ user] user)
                     event-subscriber-fixture/subscribe
                     (fn [_ event-type handler]

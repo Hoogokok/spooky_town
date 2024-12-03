@@ -8,7 +8,9 @@
    [kit.spooky-town.domain.user.gateway.token :as token-gateway]
    [kit.spooky-town.domain.user.repository.protocol :refer [find-by-email
                                                             find-by-id
-                                                            find-by-uuid save!]]
+                                                            find-by-uuid
+                                                            find-id-by-uuid
+                                                            save!]]
    [kit.spooky-town.domain.user.value :as value]))
 
 (defprotocol UserUseCase
@@ -132,11 +134,13 @@
       :email (:email result)
       :name (:name result)}))
 
-  (update-user-role [_ {:keys [user-id role]}]
+  (update-user-role [_ {:keys [user-uuid role]}]
     (with-tx user-repository
       (fn [_]
         (f/attempt-all
-          [user (or (find-by-id user-repository user-id)
+          [user-id (or (find-id-by-uuid user-repository user-uuid)
+                      (f/fail :user/not-found))
+           user (or (find-by-id user-repository user-id)
                    (f/fail :user/not-found))
            _ (when (:deleted-at user)
                (f/fail :update-error/withdrawn-user))
