@@ -109,4 +109,20 @@
         :update-error/withdrawn-user
         (response/bad-request {:error "탈퇴한 사용자입니다"})
         (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
-      (response/ok result)))) 
+      (response/ok result))))
+
+(defn update-user-role
+  [{:keys [body-params user-use-case auth-user]}]
+  (let [result (use-case/update-user-role
+                user-use-case
+                {:user-uuid (:user-uuid body-params)
+                 :role (:role body-params)})]
+    (if (f/failed? result)
+      (case (f/message result)
+        :user/not-found
+        (response/not-found {:error "사용자를 찾을 수 없습니다"})
+        :update-error/withdrawn-user
+        (response/bad-request {:error "탈퇴한 사용자입니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/ok result))))
+

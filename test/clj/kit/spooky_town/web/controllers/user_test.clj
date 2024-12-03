@@ -332,3 +332,61 @@
               response (user/update-profile request)]
           (is (= 400 (:status response)))
           (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
+
+(deftest update-user-role-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+        auth-user {:uuid test-uuid
+                  :email "test@example.com"}]
+
+    (testing "유효한 사용자 역할 업데이트"
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] 1)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:id 1
+                       :uuid test-uuid
+                       :email "test@example.com"
+                       :name "Test User"
+                       :roles #{:user}})
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [request {:body-params {:user-uuid test-uuid
+                                   :role :admin}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/update-user-role request)]
+          (is (= 200 (:status response)))
+          (is (= test-uuid (get-in response [:body :user-uuid])))
+          (is (= #{:admin} (get-in response [:body :roles]))))))
+
+    (testing "존재하지 않는 사용자 역할 업데이트"
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] nil)]
+        (let [request {:body-params {:user-uuid test-uuid
+                                   :role :admin}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/update-user-role request)]
+          (is (= 404 (:status response)))
+          (is (= "사용자를 찾을 수 없습니다" (get-in response [:body :error]))))))
+
+    (testing "탈퇴한 사용자 역할 업데이트"
+      (with-redefs [user-repository-fixture/find-id-by-uuid (fn [_ _] 1)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:id 1
+                       :uuid test-uuid
+                       :email "test@example.com"
+                       :name "Test User"
+                       :roles #{:user}
+                       :deleted-at (java.util.Date.)})]
+        (let [request {:body-params {:user-uuid test-uuid
+                                   :role :admin}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/update-user-role request)]
+          (is (= 400 (:status response)))
+          (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
