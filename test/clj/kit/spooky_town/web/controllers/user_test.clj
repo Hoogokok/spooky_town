@@ -258,3 +258,77 @@
               response (user/authenticate request)]
           (is (= 403 (:status response)))
           (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
+
+(deftest update-profile-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+        auth-user {:uuid test-uuid
+                  :email "test@example.com"
+                  :token "valid-token"}]
+
+    (testing "유효한 정보로 프로필 업데이트"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :name "Test User"})
+                    user-repository-fixture/find-by-email (fn [_ _] nil)
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [request {:body-params {:name "New Name"
+                                     :email "new@example.com"}
+                       :user-use-case user-use-case
+                       :auth-user auth-user}
+              response (user/update-profile request)]
+          (is (= 200 (:status response)))
+          (is (= test-uuid (get-in response [:body :user-uuid])))
+          (is (= "new@example.com" (get-in response [:body :email])))
+          (is (= "New Name" (get-in response [:body :name]))))))
+
+    (testing "이미 존재하는 이메일로 업데이트 시도"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :name "Test User"})
+                    user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:uuid #uuid "660e8400-e29b-41d4-a716-446655440000"
+                       :email "existing@example.com"})]
+        (let [request {:body-params {:email "existing@example.com"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/update-profile request)]
+          (is (= 409 (:status response)))
+          (is (= "이미 존재하는 이메일입니다" (get-in response [:body :error]))))))
+
+    (testing "존재하지 않는 사용자"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-id (fn [_ _] nil)]
+        (let [request {:body-params {:name "New Name"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/update-profile request)]
+          (is (= 404 (:status response)))
+          (is (= "사용자를 찾을 수 없습니다" (get-in response [:body :error]))))))
+
+    (testing "탈퇴한 사용자"
+      (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-id
+                    (fn [_ _] 
+                      {:uuid test-uuid
+                       :email "test@example.com"
+                       :name "Test User"
+                       :deleted-at (java.util.Date.)})]
+        (let [request {:body-params {:name "New Name"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/update-profile request)]
+          (is (= 400 (:status response)))
+          (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))))

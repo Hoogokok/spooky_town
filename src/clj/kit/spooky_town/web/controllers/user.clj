@@ -87,4 +87,26 @@
         :authentication-error/withdrawn-user
         (response/forbidden {:error "탈퇴한 사용자입니다"})
         (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
-      (response/ok {:token (:token result)})))) 
+      (response/ok {:token (:token result)}))))
+
+(defn update-profile
+  [{:keys [body-params user-use-case auth-user]}]
+  (let [result (use-case/update-user
+                user-use-case
+                {:token (:token auth-user)
+                 :name (:name body-params)
+                 :email (:email body-params)})]
+    (if (f/failed? result)
+      (case (f/message result)
+        :update-error/invalid-email
+        (response/bad-request {:error "유효하지 않은 이메일입니다"})
+        :update-error/invalid-name
+        (response/bad-request {:error "유효하지 않은 이름입니다"})
+        :update-error/email-already-exists
+        (response/conflict {:error "이미 존재하는 이메일입니다"})
+        :update-error/user-not-found
+        (response/not-found {:error "사용자를 찾을 수 없습니다"})
+        :update-error/withdrawn-user
+        (response/bad-request {:error "탈퇴한 사용자입니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/ok result)))) 
