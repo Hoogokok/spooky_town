@@ -53,7 +53,7 @@
      {:get {:handler (fn [req]
                        (health/healthcheck! (assoc req :tx-manager tx-manager)))}}]
     
-      ["/users"
+    ["/users"
      ["/me"
       ["/withdraw"
        {:delete {:handler (fn [req]
@@ -120,31 +120,48 @@
              :description "관리자가 대기 중인 역할 변경 요청을 거절합니다."
              :swagger {:tags ["role-requests"]
                        :security [{:bearer []}]}}}]
-     
-     
-       ["/users/password"
-         ["/reset"
-          {:post {:handler (fn [req]
-                             (password/request-reset
+
+
+     ["/users/password"
+      ["/reset"
+       {:post {:handler (fn [req]
+                          (password/request-reset
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:email string?}}
+               :responses {200 {:body {:token string?}}
+                           400 {:body {:error string?}}}
+               :summary "비밀번호 초기화 요청"
+               :description "이메일을 통해 비밀번호 초기화를 요청합니다."
+               :swagger {:tags ["users"]}}}]
+
+      ["/reset/confirm"
+       {:post {:handler (fn [req]
+                          (password/reset-password
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:token string?
+                                   :new-password string?}}
+               :responses {200 {:body {:success boolean?}}
+                           400 {:body {:error string?}}}
+               :summary "비밀번호 초기화 완료"
+               :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
+               :swagger {:tags ["users"]}}}]]
+     ["/admin"
+      ["/users"
+       ["/:id"
+        {:delete {:handler (fn [req]
+                             (user/delete-user
                               (assoc req :user-use-case user-use-case)))
-                  :parameters {:body {:email string?}}
-                  :responses {200 {:body {:token string?}}
-                              400 {:body {:error string?}}}
-                  :summary "비밀번호 초기화 요청"
-                  :description "이메일을 통해 비밀번호 초기화를 요청합니다."
-                  :swagger {:tags ["users"]}}}]
-     
-         ["/reset/confirm"
-          {:post {:handler (fn [req]
-                             (password/reset-password
-                              (assoc req :user-use-case user-use-case)))
-                  :parameters {:body {:token string?
-                                      :new-password string?}}
-                  :responses {200 {:body {:success boolean?}}
-                              400 {:body {:error string?}}}
-                  :summary "비밀번호 초기화 완료"
-                  :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
-                  :swagger {:tags ["users"]}}}]]]]])
+                  :parameters {:path {:id string?}
+                               :body {:reason string?}}
+                  :responses {204 {}
+                              400 {:body {:error string?}}
+                              403 {:body {:error string?}}
+                              404 {:body {:error string?}}
+                              500 {:body {:error string?}}}
+                  :summary "관리자가 사용자를 탈퇴 처리합니다"
+                  :description "관리자 권한으로 특정 사용자를 탈퇴 처리합니다."
+                  :swagger {:tags ["admin"]
+                            :security [{:bearer []}]}}}]]]]]])
 
 (derive :reitit.routes/api :reitit/routes)
 

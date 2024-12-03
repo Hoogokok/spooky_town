@@ -62,4 +62,83 @@
                       :auth-user auth-user}
               response (user/withdraw request)]
           (is (= 400 (:status response)))
-          (is (= "이미 탈퇴한 사용자입니다" (get-in response [:body :error])))))))) 
+          (is (= "이미 탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
+
+(deftest delete-user-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+        user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"
+        auth-user {:uuid admin-uuid
+                  :email "admin@example.com"}]
+
+    (testing "관리자가 유효한 사용자 탈퇴 처리"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid)
+                        {:uuid admin-uuid
+                         :email "admin@example.com"
+                         :roles #{:admin}}
+                        {:uuid user-uuid
+                         :email "user@example.com"
+                         :roles #{:user}}))
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [request {:path-params {:id (str user-uuid)}
+                      :body-params {:reason "관리자에 의한 탈퇴"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/delete-user request)]
+          (is (= 204 (:status response))))))
+
+    (testing "관리자 권한이 없는 경우"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ _]
+                      {:uuid admin-uuid
+                       :email "user@example.com"
+                       :roles #{:user}})]
+        (let [request {:path-params {:id (str user-uuid)}
+                      :body-params {:reason "권한 없는 탈퇴 시도"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/delete-user request)]
+          (is (= 403 (:status response)))
+          (is (= "관리자 권한이 없습니다" (get-in response [:body :error]))))))
+
+    (testing "존재하지 않는 사용자"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid)
+                        {:uuid admin-uuid
+                         :email "admin@example.com"
+                         :roles #{:admin}}
+                        nil))]
+        (let [request {:path-params {:id (str user-uuid)}
+                      :body-params {:reason "존재하지 않는 사용자"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/delete-user request)]
+          (is (= 404 (:status response)))
+          (is (= "사용자를 찾을 수 없습니다" (get-in response [:body :error]))))))
+
+    (testing "이미 탈퇴한 사용자"
+      (with-redefs [user-repository-fixture/find-by-id
+                    (fn [_ uuid]
+                      (if (= uuid admin-uuid)
+                        {:uuid admin-uuid
+                         :email "admin@example.com"
+                         :roles #{:admin}}
+                        {:uuid user-uuid
+                         :email "user@example.com"
+                         :roles #{:user}
+                         :deleted-at (java.util.Date.)}))]
+        (let [request {:path-params {:id (str user-uuid)}
+                      :body-params {:reason "이미 탈퇴한 사용자"}
+                      :user-use-case user-use-case
+                      :auth-user auth-user}
+              response (user/delete-user request)]
+          (is (= 400 (:status response)))
+          (is (= "이미 탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
