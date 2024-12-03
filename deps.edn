@@ -28,6 +28,7 @@
            org.postgresql/postgresql {:mvn/version "42.6.0"}
            buddy/buddy-auth {:mvn/version "3.0.1"}
            buddy/buddy-sign {:mvn/version "3.4.1"}
+           buddy/buddy-hashers {:mvn/version "2.0.167"}
            clj-time/clj-time {:mvn/version "0.15.2"}
            failjure/failjure {:mvn/version "2.3.0"}}
 
