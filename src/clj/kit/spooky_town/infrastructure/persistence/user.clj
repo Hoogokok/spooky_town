@@ -31,7 +31,12 @@
   (delete! [this id]
     (.with-tx tx-manager
       (fn [tx-query-fn]
-        (tx-query-fn (:delete-user! queries) datasource {:id id})))))
+        (tx-query-fn (:delete-user! queries) datasource {:id id}))))
+
+  (find-id-by-uuid [this uuid]
+    (.with-read-only tx-manager
+      (fn [tx-query-fn]
+        (:id (tx-query-fn (:get-user-id-by-uuid queries) datasource {:uuid uuid}))))))
 
 (defmethod ig/init-key :infrastructure/user-repository
   [_ {:keys [datasource tx-manager queries]}]
