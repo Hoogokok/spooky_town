@@ -31,5 +31,14 @@
                 {:token token
                  :new-password new-password})]
     (if (f/failed? result)
-      (response/bad-request {:error (f/message result)})
-      (response/ok result)))) 
+      (case (f/message result)
+        :token-error/invalid
+        (response/bad-request {:error "유효하지 않은 토큰입니다"})
+        :token-error/expired
+        (response/bad-request {:error "만료된 토큰입니다"})
+        :password-reset/invalid-password
+        (response/bad-request {:error "유효하지 않은 비밀번호입니다"})
+        :password-reset/withdrawn-user
+        (response/bad-request {:error "탈퇴한 사용자입니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/ok {:user-uuid (:user-uuid result)})))) 

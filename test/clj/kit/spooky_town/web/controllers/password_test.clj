@@ -1,11 +1,13 @@
 (ns kit.spooky-town.web.controllers.password-test
-  (:require [clojure.test :refer :all]
-            [kit.spooky-town.web.controllers.password :as password]
-            [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
-            [kit.spooky-town.domain.user.test.password-gateway :as password-gateway-fixture :refer [->TestPasswordGateway]]
-            [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
-            [kit.spooky-town.domain.user.use-case :refer [->UserUseCaseImpl]]
-            [kit.spooky-town.domain.event.test.subscriber :refer [->TestEventSubscriber]]))
+  (:require
+   [clojure.test :refer :all]
+   [failjure.core :as f]
+   [kit.spooky-town.domain.event.test.subscriber :refer [->TestEventSubscriber]]
+   [kit.spooky-town.domain.user.test.password-gateway :as password-gateway-fixture :refer [->TestPasswordGateway]]
+   [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
+   [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
+   [kit.spooky-town.domain.user.use-case :refer [->UserUseCaseImpl]]
+   [kit.spooky-town.web.controllers.password :as password]))
 
 (deftest request-password-reset-test
   (let [with-tx (fn [repo f] (f repo))
@@ -85,4 +87,86 @@
                       :user-use-case user-use-case}
               response (password/request-reset request)]
           (is (= 429 (:status response)))
-          (is (= "요청 횟수가 초과되었습니다" (get-in response [:body :error])))))))) 
+          (is (= "요청 횟수가 초과되었습니다" (get-in response [:body :error]))))))))
+
+(deftest reset-password-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
+
+    (testing "비밀번호 초기화 - 성공"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:id 1
+                       :uuid test-uuid
+                       :email "test@example.com"})
+                    password-gateway-fixture/hash-password 
+                    (fn [_ _] "hashed-password")
+                    user-repository-fixture/save! 
+                    (fn [_ user] user)]
+        (let [request {:body-params {:token "valid-token"
+                                   :new-password "new-password123!"}
+                      :user-use-case user-use-case}
+              response (password/reset-password request)]
+          (is (= 200 (:status response)))
+          (is (= test-uuid (get-in response [:body :user-uuid]))))))
+
+    (testing "비밀번호 초기화 - 유효하지 않은 토큰"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] (f/fail :token-error/invalid))]
+        (let [request {:body-params {:token "invalid-token"
+                                   :new-password "new-password123!"}
+                      :user-use-case user-use-case}
+              response (password/reset-password request)]
+          (is (= 400 (:status response)))
+          (is (= "유효하지 않은 토큰입니다" (get-in response [:body :error]))))))
+
+    (testing "비밀번호 초기화 - 만료된 토큰"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] (f/fail :token-error/expired))]
+        (let [request {:body-params {:token "expired-token"
+                                   :new-password "new-password123!"}
+                      :user-use-case user-use-case}
+              response (password/reset-password request)]
+          (is (= 400 (:status response)))
+          (is (= "만료된 토큰입니다" (get-in response [:body :error]))))))
+
+    (testing "비밀번호 초기화 - 탈퇴한 사용자"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] test-uuid)
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:id 1
+                       :uuid test-uuid
+                       :email "test@example.com"
+                       :deleted-at (java.util.Date.)})]
+        (let [request {:body-params {:token "valid-token"
+                                   :new-password "new-password123!"}
+                      :user-use-case user-use-case}
+              response (password/reset-password request)]
+          (is (= 400 (:status response)))
+          (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))
+
+    (testing "비밀번호 초기화 - 유효하지 않은 비밀번호"
+      (with-redefs [token-gateway-fixture/verify 
+                    (fn [_ _] test-uuid)
+                    password-gateway-fixture/hash-password 
+                    (fn [_ _] (f/fail :password-reset/invalid-password))
+                    user-repository-fixture/find-by-uuid
+                    (fn [_ _] 
+                      {:id 1
+                       :uuid test-uuid
+                       :email "test@example.com"})]
+        (let [request {:body-params {:token "valid-token"
+                                   :new-password "weak"}
+                      :user-use-case user-use-case}
+              response (password/reset-password request)]
+          (is (= 400 (:status response)))
+          (is (= "유효하지 않은 비밀번호입니다" (get-in response [:body :error]))))))))
+
