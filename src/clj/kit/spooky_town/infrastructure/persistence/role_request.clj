@@ -4,7 +4,7 @@
 
 (defrecord RoleRequestRepository [datasource tx-manager queries]
   protocol/RoleRequestRepository
-  (save [this request]
+  (save! [this request]
     (let [query-fn (fn [query-params]
                      ((:insert-role-request! queries) datasource query-params))]
       (.with-tx tx-manager

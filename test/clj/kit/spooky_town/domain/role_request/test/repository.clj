@@ -24,7 +24,7 @@
 
 (defrecord TestRoleRequestRepository []
   RoleRequestRepository
-  (save [this request] (save! this request))
+  (save! [this request] (save! this request))
   (find-by-id [this id] (find-by-id this id))
   (find-by-uuid [this uuid] (find-by-uuid this uuid))
   (find-all-by-user [this user-id] (find-all-by-user this user-id))
