@@ -79,3 +79,42 @@ WHERE token = :token;
 -- :doc 만료된 세션을 모두 삭제합니다
 DELETE FROM user_sessions
 WHERE expires_at <= CURRENT_TIMESTAMP;
+
+-- :name insert-role-request! :! :n
+-- :doc 새로운 역할 요청을 삽입합니다
+INSERT INTO role_requests (uuid, user_id, requested_role, reason, status)
+VALUES (:uuid, :user_id, :requested_role, :reason, :status);
+
+-- :name find-role-request-by-id :? :1
+-- :doc ID로 역할 요청을 조회합니다
+SELECT * FROM role_requests WHERE id = :id;
+
+-- :name find-role-request-by-uuid :? :1
+-- :doc UUID로 역할 요청을 조회합니다
+SELECT * FROM role_requests WHERE uuid = :uuid;
+
+-- :name find-all-role-requests-by-user :? :*
+-- :doc 사용자 ID로 모든 역할 요청을 조회합니다
+SELECT * FROM role_requests WHERE user_id = :user_id ORDER BY created_at DESC;
+
+-- :name find-all-pending-role-requests :? :*
+-- :doc 모든 대기 중인 역할 요청을 조회합니다
+SELECT * FROM role_requests WHERE status = 'pending' ORDER BY created_at ASC;
+
+-- :name update-role-request! :! :n
+-- :doc 역할 요청을 업데이트합니다
+UPDATE role_requests
+SET status = :status, updated_at = :updated_at, approved_by = :approved_by, rejected_by = :rejected_by, rejection_reason = :rejection_reason
+WHERE id = :id;
+
+-- :name find-user-id-by-uuid :? :1
+-- :doc UUID로 사용자 ID 조회
+SELECT id
+FROM users
+WHERE uuid = :uuid
+
+-- :name find-role-request-id-by-uuid :? :1
+-- :doc UUID로 역할 변경 요청 ID 조회
+SELECT id
+FROM role_requests
+WHERE uuid = :uuid

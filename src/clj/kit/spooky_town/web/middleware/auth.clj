@@ -52,6 +52,11 @@
       (handler request)
       (unauthorized "Authentication required"))))
 
-(defmethod ig/init-key :web.middleware/auth [_ {:keys [token-gateway]}]
+(defmethod ig/init-key :web.middleware/auth [_ {:keys [auth-gateway]}]
   {:name ::auth
-   :wrap #(wrap-auth % token-gateway)}) 
+   :wrap #(wrap-auth % auth-gateway)})
+
+(defmethod ig/init-key :auth/jwt [_ config]
+  (let [{:keys [jwt-secret token-expire-hours]} config]
+    {:secret jwt-secret
+     :expire-hours token-expire-hours}))

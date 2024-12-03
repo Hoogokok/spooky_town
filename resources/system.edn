@@ -35,20 +35,7 @@
                                       :absolute-redirects     true
                                       :content-types          true
                                       :default-charset        "utf-8"}}
-  :middleware {:session #ig/ref :web.middleware/session
-              :error #ig/ref :web.middleware/error}}
-
- :web.middleware/error
- {:error-handlers #ig/ref :error/handlers}
-
- :error/handlers
- {:handlers error-handlers}
-
- :reitit.routes/api
- {:base-path "/api"
-  :env       #ig/ref :system/env
-  :middleware [#ig/ref :web.middleware/auth]
-  :tx-manager #ig/ref :db/tx-manager}
+  :middleware {:auth #ig/ref :web.middleware/auth}}
 
  :router/routes
  {:routes #ig/refset :reitit/routes}
@@ -70,8 +57,7 @@
   :prod {:dbtype "postgresql"
          :jdbc-url #env JDBC_DATABASE_URL}}
 
- :db/tx-manager 
- {:conn #ig/ref :db.sql/connection}
+
 
  :db.sql/migrations
  {:store :database
@@ -93,20 +79,42 @@
  {:conn  #ig/ref :db.sql/connection
   :queries ["sql/queries.sql"]
   :options {:quoting :ansi}}
+ 
+ :db/tx-manager
+ {:conn #ig/ref :db.sql/connection
+  :queries #ig/ref :db.sql/queries}
 
  :auth/jwt
  {:jwt-secret #or [#env JWT_SECRET "DIFFERENT_SECRET_HERE"]
-  :token-expire-hours 24}
+  :token-expire-hours 24} 
+
+ :infrastructure/role-request-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/event-bus {}
+
+ :infrastructure/user-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :domain/user-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :user-repository #ig/ref :infrastructure/user-repository
+  :event-subscriber #ig/ref :infrastructure/event-bus}
+
+ :domain/role-request-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :role-request-repository #ig/ref :infrastructure/role-request-repository
+  :event-publisher #ig/ref :infrastructure/event-bus}
+
+ :reitit.routes/api
+ {:base-path ""
+  :tx-manager #ig/ref :db/tx-manager
+  :role-request-use-case #ig/ref :domain/role-request-use-case}
 
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
-
- :infrastructure.session/memory {}
-
- :web.middleware/session
- {:session-store #ig/ref :infrastructure.session/memory
-  :cookie-name "kit.session"
-  :cookie-attrs {:http-only true
-                 :same-site :strict
-                 :max-age 86400}}
 }

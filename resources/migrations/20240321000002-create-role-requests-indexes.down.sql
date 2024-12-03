@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_role_requests_user_id; 

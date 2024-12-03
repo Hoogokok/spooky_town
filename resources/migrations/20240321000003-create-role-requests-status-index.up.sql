@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_role_requests_status ON role_requests (status); 

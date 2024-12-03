@@ -1,21 +1,32 @@
 (ns kit.spooky-town.core
   (:require
-    [clojure.tools.logging :as log]
-    [integrant.core :as ig]
-    [kit.spooky-town.config :as config]
-    [kit.spooky-town.env :refer [defaults]]
+   [clojure.tools.logging :as log]
+   [integrant.core :as ig]
+   [kit.spooky-town.config :as config]
+   [kit.spooky-town.env :refer [defaults]]
 
     ;; Edges       
-    [kit.edge.server.undertow]
-    [kit.spooky-town.web.handler]
-    [kit.edge.db.sql.conman]
-    [kit.edge.db.sql.migratus]
-    [kit.spooky-town.infrastructure.persistence.core]
+   [kit.edge.server.undertow]
+   [kit.spooky-town.web.handler]
+   [kit.edge.db.sql.conman]
+   [kit.edge.db.sql.migratus]
 
-    ;; Routes
-    [kit.spooky-town.web.routes.api]
-    )
-  (:gen-class))
+
+
+   ;; Routes
+   [kit.spooky-town.web.routes.api]
+   [kit.spooky-town.web.middleware.auth]
+
+   ;; Database
+   [kit.spooky-town.infrastructure.persistence.core]
+   [kit.spooky-town.infrastructure.event.memory]
+   [kit.spooky-town.infrastructure.persistence.role-request]
+   [kit.spooky-town.infrastructure.persistence.user]
+   ;; Use-cases
+   [kit.spooky-town.domain.role-request.use-case]
+   [kit.spooky-town.domain.user.use-case])
+
+   (:gen-class))
 
 ;; log uncaught exceptions in threads
 (Thread/setDefaultUncaughtExceptionHandler
