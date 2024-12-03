@@ -81,7 +81,18 @@
                       :password "WrongPassword1!"}
               result (use-case/authenticate-user user-use-case command)]
           (is (f/failed? result))
-          (is (= :authentication-error/invalid-credentials (f/message result))))))))
+          (is (= :authentication-error/invalid-credentials (f/message result)))))) 
+    (testing  "탈퇴한 사용자로 인증 시도" 
+      (with-redefs [user-repository-fixture/find-by-email 
+                    (fn [_ _] 
+                      {:uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :deleted-at (java.util.Date.)})]
+        (let [command {:email "test@example.com"
+                      :password "Valid1!password"}
+              result (use-case/authenticate-user user-use-case command)]
+          (is (f/failed? result))
+          (is (= :authentication-error/withdrawn-user (f/message result))))))))
 
 (deftest update-user-test
   (let [with-tx (fn [repo f] (f repo))
