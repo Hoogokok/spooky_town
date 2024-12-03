@@ -116,7 +116,32 @@
                  :summary "회원 탈퇴"
                  :description "비밀번호 확인 후 회원 탈퇴를 진행합니다."
                  :swagger {:tags ["users"]
-                           :security [{:bearer []}]}}}]]]
+                           :security [{:bearer []}]}}}]
+      ["/password/reset"
+       {:post {:handler (fn [req]
+                          (password/request-reset
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:email string?}}
+               :responses {200 {:body {:token string?}}
+                           400 {:body {:error string?}}
+                           404 {:body {:error string?}}
+                           429 {:body {:error string?}}}
+               :summary "비밀번호 초기화 요청"
+               :description "이메일을 통해 비밀번호 초기화를 요청합니다."
+               :swagger {:tags ["users"]}}}]
+      ["/password/reset/confirm"
+       {:post {:handler (fn [req]
+                          (password/reset-password
+                           (assoc req :user-use-case user-use-case)))
+               :parameters {:body {:token string?
+                                   :new-password string?}}
+               :responses {200 {:body {:user-uuid string?}}
+                           400 {:body {:error string?}}
+                           401 {:body {:error string?}}
+                           404 {:body {:error string?}}}
+               :summary "비밀번호 초기화 완료"
+               :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
+               :swagger {:tags ["users"]}}}]]]
     ["/role-requests"
      {:post {:handler (fn [req]
                         (role-request/create-request
@@ -169,29 +194,6 @@
                        :security [{:bearer []}]}}}]
 
 
-     ["/users/password"
-      ["/reset"
-       {:post {:handler (fn [req]
-                          (password/request-reset
-                           (assoc req :user-use-case user-use-case)))
-               :parameters {:body {:email string?}}
-               :responses {200 {:body {:token string?}}
-                           400 {:body {:error string?}}}
-               :summary "비밀번호 초기화 요청"
-               :description "이메일을 통해 비밀번호 초기화를 요청합니다."
-               :swagger {:tags ["users"]}}}]
-
-      ["/reset/confirm"
-       {:post {:handler (fn [req]
-                          (password/reset-password
-                           (assoc req :user-use-case user-use-case)))
-               :parameters {:body {:token string?
-                                   :new-password string?}}
-               :responses {200 {:body {:success boolean?}}
-                           400 {:body {:error string?}}}
-               :summary "비밀번호 초기화 완료"
-               :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
-               :swagger {:tags ["users"]}}}]]
      ["/admin"
       ["/users"
        ["/:id"
