@@ -54,6 +54,19 @@
                        (health/healthcheck! (assoc req :tx-manager tx-manager)))}}]
     
     ["/users"
+     ["" {:post {:handler (fn [req]
+                            (user/register
+                             (assoc req :user-use-case user-use-case)))
+                 :parameters {:body {:email string?
+                                     :name string?
+                                     :password string?}}
+                 :responses {201 {:body {:token string?}}
+                             400 {:body {:error string?}}
+                             409 {:body {:error string?}}
+                             500 {:body {:error string?}}}
+                 :summary "새로운 사용자를 등록합니다"
+                 :description "이메일, 이름, 비밀번호로 새로운 사용자를 등록합니다."
+                 :swagger {:tags ["users"]}}}]
      ["/me"
       ["/withdraw"
        {:delete {:handler (fn [req]

@@ -142,3 +142,56 @@
               response (user/delete-user request)]
           (is (= 400 (:status response)))
           (is (= "이미 탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
+
+(deftest register-user-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
+
+    (testing "유효한 정보로 회원 등록"
+      (with-redefs [user-repository-fixture/find-by-email (fn [_ _] nil)
+                    password-gateway-fixture/hash-password (fn [_ _] "hashed_password")
+                    user-repository-fixture/save! (fn [_ user] user)]
+        (let [request {:body-params {:email "newuser@example.com"
+                                   :name "New User"
+                                   :password "Valid1!password"}
+                      :user-use-case user-use-case}
+              response (user/register request)]
+          (is (= 201 (:status response)))
+          (is (some? (get-in response [:body :token]))))))
+
+    (testing "이미 존재하는 이메일로 회원 등록 시도"
+      (with-redefs [user-repository-fixture/find-by-email
+                    (fn [_ _]
+                      {:email "existinguser@example.com"
+                       :name "Existing User"})
+                    password-gateway-fixture/hash-password (fn [_ _] "hashed_password")
+                    ]
+        (let [request {:body-params {:email "existinguser@example.com"
+                                   :name "Existing User"
+                                   :password "Valid1!password"}
+                      :user-use-case user-use-case}
+              response (user/register request)]
+          (is (= 409 (:status response)))
+          (is (= "이미 존재하는 이메일입니다" (get-in response [:body :error]))))))
+
+    (testing "유효하지 않은 이메일로 회원 등록 시도"
+      (let [request {:body-params {:email "invalid-email"
+                                 :name "Invalid Email User"
+                                 :password "Valid1!password"}
+                    :user-use-case user-use-case}
+            response (user/register request)]
+        (is (= 400 (:status response)))
+        (is (= "유효하지 않은 이메일입니다" (get-in response [:body :error])))))
+
+    (testing "유효하지 않은 비밀번호로 회원 등록 시도"
+      (let [request {:body-params {:email "newuser@example.com"
+                                 :name "New User"
+                                 :password "short"}
+                    :user-use-case user-use-case}
+            response (user/register request)]
+        (is (= 400 (:status response)))
+        (is (= "유효하지 않은 비밀번호입니다" (get-in response [:body :error])))))))

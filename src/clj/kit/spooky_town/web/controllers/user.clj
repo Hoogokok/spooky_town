@@ -4,6 +4,30 @@
    [kit.spooky-town.domain.user.use-case :as use-case]
    [ring.util.http-response :as response]))
 
+(defn register
+  [{:keys [body-params user-use-case]}]
+  (let [result (use-case/register-user 
+                user-use-case 
+                {:email (:email body-params)
+                 :name (:name body-params)
+                 :password (:password body-params)})]
+    (if (f/failed? result)
+      (case (f/message result)
+        :registration-error/invalid-email
+        (response/bad-request {:error "유효하지 않은 이메일입니다"})
+        :registration-error/invalid-password
+        (response/bad-request {:error "유효하지 않은 비밀번호입니다"})
+        :registration-error/invalid-name
+        (response/bad-request {:error "유효하지 않은 이름입니다"})
+        :registration-error/email-already-exists
+        (response/conflict {:error "이미 존재하는 이메일입니다"})
+        :registration-error/password-hashing-failed
+        (response/internal-server-error {:error "비밀번호 암호화에 실패했습니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/created 
+       (str "/api/v1/users/" (:user-uuid result))
+       {:token (:token result)}))))
+
 (defn withdraw
   [{:keys [body-params user-use-case auth-user]}]
   (let [result (use-case/withdraw 
