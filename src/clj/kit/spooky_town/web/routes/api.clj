@@ -52,7 +52,24 @@
     ["/health"
      {:get {:handler (fn [req]
                        (health/healthcheck! (assoc req :tx-manager tx-manager)))}}]
-    
+
+    ["/auth"
+     ["/login"
+      {:post {:handler (fn [req]
+                         (user/authenticate
+                          (assoc req :user-use-case user-use-case)))
+              :parameters {:body {:email string?
+                                  :password string?}}
+              :responses {200 {:body {:token string?}}
+                          400 {:body {:error string?}}
+                          401 {:body {:error string?}}
+                          403 {:body {:error string?}}
+                          404 {:body {:error string?}}
+                          500 {:body {:error string?}}}
+              :summary "사용자 인증"
+              :description "이메일과 비밀번호로 사용자를 인증합니다."
+              :swagger {:tags ["auth"]}}}]]
+
     ["/users"
      ["" {:post {:handler (fn [req]
                             (user/register
@@ -82,7 +99,7 @@
                  :summary "회원 탈퇴"
                  :description "비밀번호 확인 후 회원 탈퇴를 진행합니다."
                  :swagger {:tags ["users"]
-                           :security [{:bearer []}]}}}]]] 
+                           :security [{:bearer []}]}}}]]]
     ["/role-requests"
      {:post {:handler (fn [req]
                         (role-request/create-request

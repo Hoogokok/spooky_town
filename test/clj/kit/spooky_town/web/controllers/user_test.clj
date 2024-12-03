@@ -195,3 +195,66 @@
             response (user/register request)]
         (is (= 400 (:status response)))
         (is (= "유효하지 않은 비밀번호입니다" (get-in response [:body :error])))))))
+
+(deftest authenticate-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
+
+    (testing "유효한 인증 정보로 로그인"
+      (with-redefs [user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :hashed-password "hashed_password"})
+                    password-gateway-fixture/verify-password (fn [_ _ _] true)
+                    token-gateway-fixture/generate (fn [_ _ _] "valid_token")]
+        (let [request {:body-params {:email "test@example.com"
+                                   :password "Valid1!password"}
+                      :user-use-case user-use-case}
+              response (user/authenticate request)]
+          (is (= 200 (:status response)))
+          (is (= "valid_token" (get-in response [:body :token]))))))
+
+    (testing "존재하지 않는 이메일로 로그인 시도"
+      (with-redefs [user-repository-fixture/find-by-email (fn [_ _] nil)]
+        (let [request {:body-params {:email "nonexistent@example.com"
+                                   :password "Valid1!password"}
+                      :user-use-case user-use-case}
+              response (user/authenticate request)]
+          (is (= 404 (:status response)))
+          (is (= "사용자를 찾을 수 없습니다" (get-in response [:body :error]))))))
+
+    (testing "잘못된 비밀번호로 로그인 시도"
+      (with-redefs [user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :hashed-password "hashed_password"})
+                    password-gateway-fixture/verify-password (fn [_ _ _] false)
+                    token-gateway-fixture/generate (fn [_ _ _] "valid_token")]
+        (let [request {:body-params {:email "test@example.com"
+                                   :password "WrongPassword1!"}
+                      :user-use-case user-use-case}
+              response (user/authenticate request)]
+          (is (= 401 (:status response)))
+          (is (= "이메일 또는 비밀번호가 일치하지 않습니다" (get-in response [:body :error]))))))
+
+    (testing "탈퇴한 사용자로 로그인 시도"
+      (with-redefs [user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                       :email "test@example.com"
+                       :hashed-password "hashed_password"
+                       :deleted-at (java.util.Date.)})
+                    password-gateway-fixture/verify-password (fn [_ _ _] true)
+                    token-gateway-fixture/generate (fn [_ _ _] "valid_token")]
+        (let [request {:body-params {:email "test@example.com"
+                                   :password "Valid1!password"}
+                      :user-use-case user-use-case}
+              response (user/authenticate request)]
+          (is (= 403 (:status response)))
+          (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))))

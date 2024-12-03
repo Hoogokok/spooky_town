@@ -66,4 +66,25 @@
         :delete-error/already-withdrawn
         (response/bad-request {:error "이미 탈퇴한 사용자입니다"})
         (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
-      (response/no-content)))) 
+      (response/no-content))))
+
+(defn authenticate
+  [{:keys [body-params user-use-case]}]
+  (let [result (use-case/authenticate-user
+                user-use-case
+                {:email (:email body-params)
+                 :password (:password body-params)})]
+    (if (f/failed? result)
+      (case (f/message result)
+        :authentication-error/invalid-email
+        (response/bad-request {:error "유효하지 않은 이메일입니다"})
+        :authentication-error/invalid-password
+        (response/bad-request {:error "유효하지 않은 비밀번호입니다"})
+        :authentication-error/user-not-found
+        (response/not-found {:error "사용자를 찾을 수 없습니다"})
+        :authentication-error/invalid-credentials
+        (response/unauthorized {:error "이메일 또는 비밀번호가 일치하지 않습니다"})
+        :authentication-error/withdrawn-user
+        (response/forbidden {:error "탈퇴한 사용자입니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/ok {:token (:token result)})))) 
