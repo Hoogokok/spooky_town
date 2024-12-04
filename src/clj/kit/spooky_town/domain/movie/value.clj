@@ -70,4 +70,22 @@
 
 (defn create-runtime [runtime]
   (when (s/valid? ::runtime runtime)
-    runtime)) 
+    runtime))
+
+;; 배우 정보
+(def max-actor-name-length 50)
+(s/def ::actor-name (s/and string? 
+                          #(pos? (count %))
+                          #(<= (count %) max-actor-name-length)))
+(s/def ::role string?)  ;; 배역 이름
+(s/def ::actor (s/keys :req-un [::actor-name]
+                       :opt-un [::role]))
+(s/def ::actors (s/coll-of ::actor :kind vector?))
+
+(defn create-actor [{:keys [actor-name role] :as actor}]
+  (when (s/valid? ::actor actor)
+    actor))
+
+(defn create-actors [actors]
+  (when (s/valid? ::actors actors)
+    actors)) 
