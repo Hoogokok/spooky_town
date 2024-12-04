@@ -1,13 +1,16 @@
 (ns kit.spooky-town.web.controllers.user-test
-  (:require [clojure.test :refer :all]
-            [kit.spooky-town.web.controllers.user :as user]
-            [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
-            [kit.spooky-town.domain.user.test.password-gateway :as password-gateway-fixture :refer [->TestPasswordGateway]]
-            [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
-            [kit.spooky-town.domain.event.test.subscriber :refer [->TestEventSubscriber]] 
-            [kit.spooky-town.domain.user.use-case :refer [->UserUseCaseImpl]]
-            
-            [ring.mock.request :as mock]))
+  (:require
+   [clojure.test :refer :all]
+   [failjure.core :as f]
+   [kit.spooky-town.domain.event.test.subscriber :refer [->TestEventSubscriber]]
+   [kit.spooky-town.domain.user.test.email-gateway-fixture :as email-gateway-fixture :refer [->TestEmailGateway]]
+   [kit.spooky-town.domain.user.test.email-token-gateway-fixture :as email-token-gateway-fixture :refer [->TestEmailTokenGateway]]
+   [kit.spooky-town.domain.user.test.email-verification-gateway-fixture :as email-verification-gateway-fixture :refer [->TestEmailVerificationGateway]]
+   [kit.spooky-town.domain.user.test.password-gateway :as password-gateway-fixture :refer [->TestPasswordGateway]]
+   [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
+   [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
+   [kit.spooky-town.domain.user.use-case :refer [->UserUseCaseImpl]]
+   [kit.spooky-town.web.controllers.user :as user]))
 
 (deftest withdraw-test
   (let [with-tx (fn [repo f] (f repo))
@@ -15,10 +18,13 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         auth-user {:uuid test-uuid
-                  :email "test@example.com"}]
+                   :email "test@example.com"}]
 
     (testing "유효한 비밀번호로 회원 탈퇴"
       (with-redefs [password-gateway-fixture/verify-password (fn [_ _ _] true)
@@ -70,7 +76,10 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
         admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"
         auth-user {:uuid admin-uuid
@@ -149,7 +158,10 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)]
 
     (testing "유효한 정보로 회원 등록"
       (with-redefs [user-repository-fixture/find-by-email (fn [_ _] nil)
@@ -202,7 +214,10 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)]
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)]
 
     (testing "유효한 인증 정보로 로그인"
       (with-redefs [user-repository-fixture/find-by-email
@@ -265,11 +280,14 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         auth-user {:uuid test-uuid
-                  :email "test@example.com"
-                  :token "valid-token"}]
+                   :email "test@example.com"
+                   :token "valid-token"}]
 
     (testing "유효한 정보로 프로필 업데이트"
       (with-redefs [token-gateway-fixture/verify (fn [_ _] test-uuid)
@@ -339,7 +357,10 @@
         token-gateway (->TestTokenGateway)
         user-repository (->TestUserRepository)
         event-subscriber (->TestEventSubscriber)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
         admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"
         auth-user {:uuid admin-uuid
@@ -419,3 +440,81 @@
               response (user/update-user-role request)]
           (is (= 400 (:status response)))
           (is (= "탈퇴한 사용자입니다" (get-in response [:body :error]))))))))
+
+(deftest request-email-verification-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)]
+
+    (testing "유효한 이메일로 인증 요청"
+      (with-redefs [user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:email "test@example.com"
+                       :name "Test User"})
+                    email-token-gateway-fixture/generate-token
+                    (fn [_ _ _] "test-token")
+                    email-gateway-fixture/send-verification-email
+                    (fn [_ _ _] nil)
+                    email-verification-gateway-fixture/save-verification-status!
+                    (fn [_ _ _ _] nil)]
+        (let [request {:body-params {:email "test@example.com"}
+                      :user-use-case user-use-case}
+              response (user/request-email-verification request)]
+          (is (= 200 (:status response)))
+          (is (= "이메일 인증 링크가 발송되었습니다" (get-in response [:body :message]))))))
+
+    (testing "존재하지 않는 이메일로 인증 요청"
+      (with-redefs [user-repository-fixture/find-by-email (fn [_ _] nil)
+                    email-token-gateway-fixture/generate-token
+                    (fn [_ _ _] "test-token")
+                    email-gateway-fixture/send-verification-email
+                    (fn [_ _ _] nil)
+                    email-verification-gateway-fixture/save-verification-status!
+                    (fn [_ _ _ _] nil)]
+        (let [request {:body-params {:email "nonexistent@example.com"}
+                      :user-use-case user-use-case}
+              response (user/request-email-verification request)]
+          (is (= 404 (:status response)))
+          (is (= "사용자를 찾을 수 없습니다" (get-in response [:body :error]))))))))
+
+(deftest verify-email-test
+  (let [with-tx (fn [repo f] (f repo))
+        password-gateway (->TestPasswordGateway)
+        token-gateway (->TestTokenGateway)
+        user-repository (->TestUserRepository)
+        event-subscriber (->TestEventSubscriber)
+        email-gateway (->TestEmailGateway)
+        email-token-gateway (->TestEmailTokenGateway)
+        email-verification-gateway (->TestEmailVerificationGateway)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)]
+
+    (testing "유효한 토큰으로 이메일 인증"
+      (with-redefs [email-token-gateway-fixture/verify-token
+                    (fn [_ _] {:email "test@example.com"})
+                    user-repository-fixture/find-by-email
+                    (fn [_ _] 
+                      {:email "test@example.com"
+                       :name "Test User"})
+                    email-verification-gateway-fixture/save-verification-status!
+                    (fn [_ _ _ _] nil)]
+        (let [request {:body-params {:token "valid-token"}
+                      :user-use-case user-use-case}
+              response (user/verify-email request)]
+          (is (= 200 (:status response)))
+          (is (= "이메일 인증이 완료되었습니다" (get-in response [:body :message]))))))
+
+    (testing "유효하지 않은 토큰으로 인증 시도"
+      (with-redefs [email-token-gateway-fixture/verify-token
+                    (fn [_ _] (f/fail :verification-error/invalid-token))]
+        (let [request {:body-params {:token "invalid-token"}
+                      :user-use-case user-use-case}
+              response (user/verify-email request)]
+          (is (= 400 (:status response)))
+          (is (= "유효하지 않은 토큰입니다" (get-in response [:body :error]))))))))
+

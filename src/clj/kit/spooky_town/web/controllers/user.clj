@@ -131,3 +131,38 @@
         (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
       (response/ok result))))
 
+(defn request-email-verification
+  [{:keys [user-use-case body-params]}]
+  (let [result (use-case/request-email-verification 
+                user-use-case 
+                (:email body-params)
+                :registration)]
+    (if (f/failed? result)
+      (case (f/message result)
+        :email-verification/user-not-found
+        (response/not-found {:error "사용자를 찾을 수 없습니다"})
+        :email-verification/invalid-email
+        (response/bad-request {:error "유효하지 않은 이메일입니다"})
+        :email-verification/invalid-purpose
+        (response/bad-request {:error "유효하지 않은 목적입니다"})
+        :email-verification/failed
+        (response/internal-server-error {:error "이메일 인증 링크 발송에 실패했습니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/ok {:message "이메일 인증 링크가 발송되었습니다"}))))
+
+(defn verify-email
+  [{:keys [user-use-case body-params]}]
+  (let [result (use-case/verify-email 
+                user-use-case 
+                (:token body-params))]
+    (if (f/failed? result)
+      (case (f/message result)
+        :email-verification/invalid-token
+        (response/bad-request {:error "유효하지 않은 토큰입니다"})
+        :email-verification/token-expired
+        (response/bad-request {:error "만료된 토큰입니다"})
+        :email-verification/user-not-found
+        (response/not-found {:error "사용자를 찾을 수 없습니다"})
+        (response/internal-server-error {:error "알 수 없는 오류가 발생했습니다"}))
+      (response/ok {:message "이메일 인증이 완료되었습니다"}))))
+

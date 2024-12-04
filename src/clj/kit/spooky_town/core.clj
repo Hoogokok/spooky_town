@@ -11,11 +11,14 @@
    [kit.edge.db.sql.conman]
    [kit.edge.db.sql.migratus]
 
-
-
    ;; Routes
    [kit.spooky-town.web.routes.api]
    [kit.spooky-town.web.middleware.auth]
+
+   ;; Infrastructure
+   [kit.spooky-town.infrastructure.email.smtp-gateway]
+   [kit.spooky-town.infrastructure.auth.jwt-email-token-gateway]
+   [kit.spooky-town.infrastructure.auth.bcrypt-gateway]
 
    ;; Database
    [kit.spooky-town.infrastructure.persistence.core]

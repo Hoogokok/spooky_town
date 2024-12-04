@@ -19,3 +19,6 @@ modules/
 .calva/output-window/
 .lsp/.cache/
 .clj-kondo/imports/
+
+# secrets
+secrets.edn

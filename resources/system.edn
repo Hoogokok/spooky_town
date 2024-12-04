@@ -106,7 +106,10 @@
  {:with-tx #ig/ref :db/tx-manager
   :user-repository #ig/ref :infrastructure/user-repository
   :event-subscriber #ig/ref :infrastructure/event-bus
-  :password-gateway #ig/ref :auth/bcrypt-password-gateway}
+  :password-gateway #ig/ref :auth/bcrypt-password-gateway
+  :token-gateway #ig/ref :auth/jwt
+  :email-gateway #ig/ref :infrastructure/email-gateway
+  :email-token-gateway #ig/ref :infrastructure/email-token-gateway}
 
  :domain/role-request-use-case
  {:with-tx #ig/ref :db/tx-manager
@@ -121,4 +124,16 @@
 
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
+
+ :infrastructure/email-gateway
+ {:smtp-config {:host #or [#env SMTP_HOST "smtp.gmail.com"]
+               :port #long #or [#env SMTP_PORT 587]
+               :user #env SMTP_USER
+               :pass #env SMTP_PASS
+               :tls true
+               :from #or [#env SMTP_FROM "noreply@spookytown.com"]}
+  :base-url #or [#env BASE_URL "http://localhost:3000"]}
+
+ :infrastructure/email-token-gateway
+ {:secret #or [#env EMAIL_TOKEN_SECRET "ANOTHER_SECRET_HERE"]}
 }

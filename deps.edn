@@ -27,10 +27,11 @@
            com.github.seancorfield/next.jdbc {:mvn/version "1.3.909"}
            org.postgresql/postgresql {:mvn/version "42.6.0"}
            buddy/buddy-auth {:mvn/version "3.0.1"}
-           buddy/buddy-sign {:mvn/version "3.4.1"}
+           buddy/buddy-sign {:mvn/version "3.5.351"}
            buddy/buddy-hashers {:mvn/version "2.0.167"}
            clj-time/clj-time {:mvn/version "0.15.2"}
-           failjure/failjure {:mvn/version "2.3.0"}}
+           failjure/failjure {:mvn/version "2.3.0"}
+           com.draines/postal {:mvn/version "2.0.5"}}
 
  :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}}
                    :ns-default build}
