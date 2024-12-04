@@ -1,0 +1,37 @@
+(ns kit.spooky-town.web.routes.auth
+  (:require [kit.spooky-town.web.controllers.user :as user]))
+
+(defn auth-routes [{:keys [user-use-case]}]
+  ["/auth"
+   ["/login"
+    {:post {:handler (fn [req]
+                      (user/authenticate
+                       (assoc req :user-use-case user-use-case)))
+            :parameters {:body [:map
+                              [:email :string]
+                              [:password :string]]}
+            :responses {200 {:body [:map [:token :string]]}
+                       400 {:body [:map [:error :string]]}
+                       401 {:body [:map [:error :string]]}
+                       403 {:body [:map [:error :string]]}
+                       404 {:body [:map [:error :string]]}
+                       500 {:body [:map [:error :string]]}}
+            :summary "사용자 인증"
+            :description "이메일과 비밀번호로 사용자를 인증합니다."
+            :swagger {:tags ["auth"]}}}]
+   
+   ["/register"
+    {:post {:handler (fn [req]
+                      (user/register
+                       (assoc req :user-use-case user-use-case)))
+            :parameters {:body [:map
+                              [:email :string]
+                              [:name :string]
+                              [:password :string]]}
+            :responses {201 {:body [:map [:token :string]]}
+                       400 {:body [:map [:error :string]]}
+                       409 {:body [:map [:error :string]]}
+                       500 {:body [:map [:error :string]]}}
+            :summary "새로운 사용자를 등록합니다"
+            :description "이메일, 이름, 비밀번호로 새로운 사용자를 등록합니다."
+            :swagger {:tags ["auth"]}}}]]) 
