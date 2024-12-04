@@ -8,6 +8,7 @@
    [kit.spooky-town.web.routes.auth :refer [auth-routes]]
    [kit.spooky-town.web.routes.user :refer [user-routes]]
    [kit.spooky-town.web.routes.role-request :refer [role-request-routes]]
+   [kit.spooky-town.web.routes.admin :refer [admin-routes]]
    [reitit.coercion.malli :as malli]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.muuntaja :as muuntaja]
@@ -41,7 +42,8 @@
     (health-routes opts)
     (auth-routes opts)
     (user-routes opts)
-    (role-request-routes opts)]])
+    (role-request-routes opts)
+    (admin-routes opts)]])
 
 (derive :reitit.routes/api :reitit/routes)
 
