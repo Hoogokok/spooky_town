@@ -9,13 +9,31 @@
                       #(<= (count %) max-title-length)))
 
 ;; 감독 (필수)
+;; 입력용 값 객체
 (def max-director-name-length 20)
 (s/def ::director-name (s/and string? 
                              #(pos? (count %))
                              #(<= (count %) max-director-name-length)))
-(s/def ::director (s/keys :req-un [::director-name]))
-(s/def ::directors (s/and (s/coll-of ::director :kind vector?)
-                         #(pos? (count %))))  ;; 최소 1명 이상
+(s/def ::director-input (s/keys :req-un [::director-name]))
+(s/def ::director-inputs (s/and (s/coll-of ::director-input :kind vector?)
+                               #(pos? (count %))))
+
+;; 저장용 값 객체
+(s/def ::director-id pos-int?)
+(s/def ::director-ids (s/and (s/coll-of ::director-id :kind vector?)
+                            #(pos? (count %))))
+
+(defn create-director-input [director]
+  (when (s/valid? ::director-input director)
+    director))
+
+(defn create-director-inputs [directors]
+  (when (s/valid? ::director-inputs directors)
+    directors))
+
+(defn create-director-ids [ids]
+  (when (s/valid? ::director-ids ids)
+    ids))
 
 ;; 장르 (필수로 호러나 스릴러를 포함해야 함)
 (s/def ::primary-genre #{:horror :thriller})
@@ -74,21 +92,36 @@
     runtime))
 
 ;; 배우 정보
+;; 입력용 값 객체
 (def max-actor-name-length 50)
 (s/def ::actor-name (s/and string? 
                           #(pos? (count %))
                           #(<= (count %) max-actor-name-length)))
-(s/def ::role string?)  ;; 배역 이름
-(s/def ::actor (s/keys :req-un [::actor-name]
-                       :opt-un [::role]))
-(s/def ::actors (s/coll-of ::actor :kind vector?))
+(s/def ::role string?)
+(s/def ::actor-input (s/keys :req-un [::actor-name]
+                            :opt-un [::role]))
+(s/def ::actor-inputs (s/coll-of ::actor-input :kind vector?))
 
-(defn create-actor [{:keys [actor-name role] :as actor}]
-  (when (s/valid? ::actor actor)
+;; 저장용 값 객체
+(s/def ::actor-id pos-int?)
+(s/def ::movie-actor {:actor-id ::actor-id
+                      :role (s/nilable ::role)})
+(s/def ::movie-actors (s/coll-of ::movie-actor :kind vector?))
+
+(defn create-actor-input [actor]
+  (when (s/valid? ::actor-input actor)
     actor))
 
-(defn create-actors [actors]
-  (when (s/valid? ::actors actors)
+(defn create-actor-inputs [actors]
+  (when (s/valid? ::actor-inputs actors)
+    actors))
+
+(defn create-movie-actor [{:keys [actor-id role] :as actor}]
+  (when (s/valid? ::movie-actor actor)
+    actor))
+
+(defn create-movie-actors [actors]
+  (when (s/valid? ::movie-actors actors)
     actors))
 
 ;; 포스터 (이미지 값 객체 사용)
