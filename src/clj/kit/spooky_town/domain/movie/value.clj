@@ -36,7 +36,8 @@
                          :upcoming         ;; 개봉 예정
                          :unknown})        ;; 미정
 
-(s/def ::release-date inst?)              ;; 실제 개봉일 또는 개봉 예정일
+(def date-regex #"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
+(s/def ::release-date (s/and string? #(re-matches date-regex %)))
 (s/def ::release-info 
   (s/keys :req-un [::release-status]
           :opt-un [::release-date]))
