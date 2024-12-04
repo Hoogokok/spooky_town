@@ -63,4 +63,35 @@
                          404 {:body [:map [:error :string]]}}
              :summary "회원가입 이메일 인증 완료"
              :description "이메일 인증 토큰을 확인하고 회원가입을 완료합니다."
-             :swagger {:tags ["auth"]}}}]]])
+             :swagger {:tags ["auth"]}}}]
+
+    ["/password"
+     ["/reset"
+      {:post {:handler (fn [req]
+                         (password/request-reset
+                          (assoc req :user-use-case user-use-case)))
+              :parameters {:body [:map
+                                  [:email :string]]}
+              :responses {200 {:body [:map [:token :string]]}
+                          400 {:body [:map [:error :string]]}
+                          404 {:body [:map [:error :string]]}
+                          429 {:body [:map [:error :string]]}}
+              :summary "비밀번호 초기화 요청"
+              :description "이메일을 통해 비밀번호 초기화를 요청합니다."
+              :swagger {:tags ["auth"]}}}]
+
+     ["/reset/confirm"
+      {:post {:handler (fn [req]
+                         (password/reset-password
+                          (assoc req :user-use-case user-use-case)))
+              :parameters {:body [:map
+                                  [:token :string]
+                                  [:new-password :string]]}
+              :responses {200 {:body [:map [:user-uuid :string]]}
+                          400 {:body [:map [:error :string]]}
+                          401 {:body [:map [:error :string]]}
+                          404 {:body [:map [:error :string]]}}
+              :summary "비밀번호 초기화 완료"
+              :description "토큰을 사용하여 새로운 비밀번호로 변경합니다."
+              :swagger {:tags ["auth"]}}}]]
+              ]])
