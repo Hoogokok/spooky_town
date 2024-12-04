@@ -31,6 +31,26 @@
                                   :kind set?)
                        #(some ::primary-genre %)))  ;; horror나 thriller 중 하나는 반드시 포함
 
+;; 개봉 상태와 날짜
+(s/def ::release-status #{:released        ;; 개봉됨
+                         :upcoming         ;; 개봉 예정
+                         :unknown})        ;; 미정
+
+(s/def ::release-date inst?)              ;; 실제 개봉일 또는 개봉 예정일
+(s/def ::release-info 
+  (s/keys :req-un [::release-status]
+          :opt-un [::release-date]))
+
+(defn create-release-info
+  ([status]
+   (when (s/valid? ::release-status status)
+     {:release-status status}))
+  ([status date]
+   (when (and (s/valid? ::release-status status)
+              (s/valid? ::release-date date))
+     {:release-status status
+      :release-date date})))
+
 ;; 기본 생성 함수들
 (defn create-title [title]
   (when (s/valid? ::title title)
