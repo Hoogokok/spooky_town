@@ -45,10 +45,12 @@
                           :gore           ;; 고어
                           :mystery})      ;; 미스터리
 
-(s/def ::genres (s/and (s/coll-of (s/or :primary ::primary-genre
-                                        :secondary ::secondary-genre)
-                                  :kind set?)
-                       #(some ::primary-genre %)))  ;; horror나 thriller 중 하나는 반드시 포함
+(s/def ::genres (s/and (s/coll-of keyword? :kind set?)
+                       #(or (contains? % :horror)
+                           (contains? % :thriller))
+                       #(every? (fn [genre] (or (contains? #{:horror :thriller} genre)
+                                              (contains? #{:psychological :supernatural :slasher 
+                                                         :zombie :monster :gore :mystery} genre))) %)))
 
 ;; 개봉 상태와 날짜
 (s/def ::release-status #{:released        ;; 개봉됨
@@ -61,15 +63,9 @@
   (s/keys :req-un [::release-status]
           :opt-un [::release-date]))
 
-(defn create-release-info
-  ([status]
-   (when (s/valid? ::release-status status)
-     {:release-status status}))
-  ([status date]
-   (when (and (s/valid? ::release-status status)
-              (s/valid? ::release-date date))
-     {:release-status status
-      :release-date date})))
+(defn create-release-info [{:keys [release-status release-date] :as release-info}]
+  (when (s/valid? ::release-info release-info)
+    release-info))
 
 ;; 기본 생성 함수들
 (defn create-title [title]
