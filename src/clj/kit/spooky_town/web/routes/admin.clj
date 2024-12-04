@@ -1,6 +1,6 @@
 (ns kit.spooky-town.web.routes.admin
   (:require [kit.spooky-town.web.controllers.user :as user]
-            [kit.spooky-town.web.routes.api :refer [authenticated-route-data]]))
+            [kit.spooky-town.web.routes.common :refer [authenticated-route-data]]))
 
 (defn admin-routes [{:keys [user-use-case]}]
   ["/admin"

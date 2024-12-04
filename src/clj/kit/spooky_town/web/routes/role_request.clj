@@ -1,6 +1,6 @@
 (ns kit.spooky-town.web.routes.role-request
   (:require [kit.spooky-town.web.controllers.role-request :as role-request]
-            [kit.spooky-town.web.routes.api :refer [authenticated-route-data]]))
+            [kit.spooky-town.web.routes.common :refer [authenticated-route-data]]))
 
 (defn role-request-routes [{:keys [role-request-use-case]}]
   ["/role-requests"

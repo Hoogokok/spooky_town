@@ -28,9 +28,6 @@
                 coercion/coerce-request-middleware
                 exception/wrap-exception]})
 
-(def authenticated-route-data
-  {:middleware [auth/wrap-auth-required]})
-
 (defn api-routes [opts]
   ["/api"
    route-data
