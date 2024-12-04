@@ -26,8 +26,10 @@
                 muuntaja/format-request-middleware
                 coercion/coerce-response-middleware
                 coercion/coerce-request-middleware
-                exception/wrap-exception
-                auth/wrap-auth-required]})
+                exception/wrap-exception]})
+
+(def authenticated-route-data
+  {:middleware [auth/wrap-auth-required]})
 
 (defn api-routes [opts]
   ["/api"
