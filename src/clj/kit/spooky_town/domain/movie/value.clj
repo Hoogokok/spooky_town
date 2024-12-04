@@ -63,4 +63,11 @@
 
 (defn create-genres [genres]
   (when (s/valid? ::genres genres)
-    genres)) 
+    genres))
+
+;; 상영시간 (분 단위, 양수)
+(s/def ::runtime (s/and pos-int? #(pos? %)))
+
+(defn create-runtime [runtime]
+  (when (s/valid? ::runtime runtime)
+    runtime)) 
