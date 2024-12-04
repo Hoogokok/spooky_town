@@ -10,6 +10,15 @@
                  :release-date "2024-12-25"}
    :genres #{:horror :psychological}})
 
+(def valid-movie-with-optional
+  (assoc valid-movie-data
+         :movie-actors [{:actor-id 1 :role "주연"}
+                       {:actor-id 2 :role "조연"}]
+         :runtime 120
+         :poster {:url "http://example.com/poster.jpg"
+                 :width 600
+                 :height 800}))
+
 (deftest create-movie-test
   (testing "필수 속성으로 영화 생성"
     (let [movie (entity/create-movie valid-movie-data)]
@@ -26,6 +35,16 @@
         (is (inst? (:updated-at movie)))
         (is (= (:created-at movie) (:updated-at movie))))))
 
+  (testing "선택 속성을 포함한 영화 생성"
+    (let [movie (entity/create-movie valid-movie-with-optional)]
+      (testing "선택 속성 검증"
+        (is (= (:movie-actors movie) 
+               (:movie-actors valid-movie-with-optional)))
+        (is (= (:runtime movie) 
+               (:runtime valid-movie-with-optional)))
+        (is (= (:poster movie) 
+               (:poster valid-movie-with-optional))))))
+
   (testing "영화 생성 실패 케이스"
     (testing "UUID 없는 경우"
       (is (nil? (entity/create-movie (dissoc valid-movie-data :uuid)))))
@@ -41,4 +60,5 @@
     
     (testing "장르에 horror/thriller 둘 다 없는 경우"
       (is (nil? (entity/create-movie 
-                 (assoc valid-movie-data :genres #{:psychological :zombie}))))))) 
+                 (assoc valid-movie-data :genres #{:psychological :zombie})))))))
+

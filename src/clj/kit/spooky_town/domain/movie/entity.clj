@@ -26,17 +26,24 @@
           :opt-un [::movie-actors ::runtime ::poster]))
 
 ;; 생성 함수
-(defn create-movie [{:keys [uuid title director-ids release-info genres] :as movie}]
+(defn create-movie [{:keys [uuid title director-ids release-info genres
+                           movie-actors runtime poster] :as movie}]
   (let [created-title (value/create-title title)
         created-director-ids (value/create-director-ids director-ids)
         created-release-info (value/create-release-info release-info)
-        created-genres (value/create-genres genres)]
+        created-genres (value/create-genres genres)
+        created-movie-actors (when movie-actors (value/create-movie-actors movie-actors))
+        created-runtime (when runtime (value/create-runtime runtime))
+        created-poster (when poster (image/create-image poster))]
     (when (and uuid created-title created-director-ids created-release-info created-genres)
       (let [now (java.util.Date.)]
-        {:uuid uuid
-         :created-at now
-         :updated-at now
-         :title title
-         :director-ids director-ids
-         :release-info release-info
-         :genres genres})))) 
+        (cond-> {:uuid uuid
+                 :created-at now
+                 :updated-at now
+                 :title title
+                 :director-ids director-ids
+                 :release-info release-info
+                 :genres genres}
+          movie-actors (assoc :movie-actors movie-actors)
+          runtime (assoc :runtime runtime)
+          poster (assoc :poster poster)))))) 
