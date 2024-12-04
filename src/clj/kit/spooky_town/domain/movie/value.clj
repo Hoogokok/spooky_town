@@ -1,5 +1,6 @@
 (ns kit.spooky-town.domain.movie.value
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [kit.spooky-town.domain.common.image :as image]))
 
 ;; 제목 (필수)
 (def max-title-length 200)
@@ -88,4 +89,10 @@
 
 (defn create-actors [actors]
   (when (s/valid? ::actors actors)
-    actors)) 
+    actors))
+
+;; 포스터 (이미지 값 객체 사용)
+(s/def ::poster ::image/image)
+
+(defn create-poster [poster]
+  (image/create-image poster)) 
