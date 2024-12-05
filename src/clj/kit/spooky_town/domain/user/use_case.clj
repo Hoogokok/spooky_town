@@ -207,7 +207,8 @@
                (fn [{:keys [user-id role]}]
                  (update-user-role this {:user-id user-id :role role}))))
 
-  (withdraw [_ {:keys [user-uuid password reason]}]
+  (withdraw 
+   [_ {:keys [user-uuid password reason]}] 
     (f/attempt-all
      [password' (or (value/create-password password)
                    (f/fail :withdrawal-error/invalid-password))
@@ -229,14 +230,14 @@
 
   (delete-user [_ {:keys [admin-uuid user-uuid reason]}]
     (f/attempt-all
-     [admin (or (find-by-id user-repository admin-uuid)
+     [admin (or (find-by-uuid user-repository admin-uuid)
                 (f/fail :delete-error/admin-not-found))
       _ (when-not (admin? admin)
           (f/fail :delete-error/insufficient-permissions))
       result (with-tx user-repository
                (fn [repo]
                  (f/attempt-all
-                  [user (or (find-by-id repo user-uuid)
+                  [user (or (find-by-uuid repo user-uuid)
                             (f/fail :delete-error/user-not-found))
                    _ (when (:deleted-at user)
                        (f/fail :delete-error/already-withdrawn))

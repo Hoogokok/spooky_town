@@ -349,7 +349,7 @@
         user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"]
 
     (testing "관리자가 유효한 사용자 탈퇴 처리"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ uuid]
                       (if (= uuid admin-uuid)
                         {:uuid admin-uuid
@@ -367,7 +367,7 @@
           (is (:success result)))))
 
     (testing "관리자 권한이 없는 경우"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ _]
                       {:uuid admin-uuid
                        :email "user@example.com"
@@ -380,7 +380,7 @@
           (is (= :delete-error/insufficient-permissions (f/message result))))))
 
     (testing "존재하지 않는 관리자"
-      (with-redefs [user-repository-fixture/find-by-id (fn [_ _] nil)]
+      (with-redefs [user-repository-fixture/find-by-uuid (fn [_ _] nil)]
         (let [command {:admin-uuid admin-uuid
                       :user-uuid user-uuid
                       :reason "존재하지 않는 관리자"}
@@ -389,7 +389,7 @@
           (is (= :delete-error/admin-not-found (f/message result))))))
 
     (testing "존재하지 않는 사용자"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ uuid]
                       (if (= uuid admin-uuid)
                         {:uuid admin-uuid
@@ -404,7 +404,7 @@
           (is (= :delete-error/user-not-found (f/message result))))))
 
     (testing "이미 탈퇴한 사용자"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ uuid]
                       (if (= uuid admin-uuid)
                         {:uuid admin-uuid

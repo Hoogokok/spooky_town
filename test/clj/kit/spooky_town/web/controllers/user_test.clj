@@ -89,7 +89,7 @@
                   :email "admin@example.com"}]
 
     (testing "관리자가 유효한 사용자 탈퇴 처리"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ uuid]
                       (if (= uuid admin-uuid)
                         {:uuid admin-uuid
@@ -107,7 +107,7 @@
           (is (= 204 (:status response))))))
 
     (testing "관리자 권한이 없는 경우"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ _]
                       {:uuid admin-uuid
                        :email "user@example.com"
@@ -121,7 +121,7 @@
           (is (= "관리자 권한이 없습니다" (get-in response [:body :error]))))))
 
     (testing "존재하지 않는 사용자"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ uuid]
                       (if (= uuid admin-uuid)
                         {:uuid admin-uuid
@@ -137,7 +137,7 @@
           (is (= "사용자를 찾을 수 없습니다" (get-in response [:body :error]))))))
 
     (testing "이미 탈퇴한 사용자"
-      (with-redefs [user-repository-fixture/find-by-id
+      (with-redefs [user-repository-fixture/find-by-uuid
                     (fn [_ uuid]
                       (if (= uuid admin-uuid)
                         {:uuid admin-uuid
