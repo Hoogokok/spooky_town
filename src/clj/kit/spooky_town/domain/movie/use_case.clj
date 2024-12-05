@@ -1,7 +1,6 @@
 (ns kit.spooky-town.domain.movie.use-case
   (:require [integrant.core :as ig]
-            [failjure.core :as f]
-            [kit.spooky-town.domain.movie.entity :as entity]
+            [failjure.core :as f] 
             [kit.spooky-town.domain.movie.value :as value]
             [kit.spooky-town.domain.director.repository.protocol :as director-repository]
             [kit.spooky-town.domain.common.image.gateway.protocol :as image-gateway]
