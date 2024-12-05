@@ -22,14 +22,6 @@
                    ::release-info ::genres]
           :opt-un [::runtime ::movie-actors ::poster]))
 
-(defn explain-movie
-  "영화 엔티티의 유효성 검증 실패 이유를 반환합니다."
-  [movie]
-  (when-let [ed (s/explain-data ::movie movie)]
-    {:problems (::s/problems ed)
-     :spec (::s/spec ed)
-     :value (::s/value ed)}))
-
 (defrecord Movie [movie-id uuid title director-ids release-info genres
                   runtime movie-actors poster
                   created-at updated-at])
@@ -54,10 +46,6 @@
 
                  poster
                  (assoc :poster poster)))]
-    (if (s/valid? ::movie movie)
-      movie
-      (let [validation-error (explain-movie movie)]
-        (println "Movie validation failed:")
-        (println "Problems:" (-> validation-error :problems))
-        nil))))
+    (when (s/valid? ::movie movie)
+      movie)))
 

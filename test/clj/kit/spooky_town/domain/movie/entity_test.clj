@@ -39,7 +39,6 @@
         (is (inst? (:updated-at movie))))))
 
   (testing "선택 속성을 포함한 영화 생성" 
-    (println "valid-movie-with-optional:" valid-movie-with-optional)
     (let [movie (entity/create-movie valid-movie-with-optional)]
       (println "Movie-with-optional:" movie)
      ))
