@@ -9,37 +9,32 @@
 (s/def ::created-at ::value/created-at)
 (s/def ::updated-at ::value/updated-at)
 (s/def ::title ::value/title)
-(s/def ::director-ids ::value/director-ids)
 (s/def ::release-info ::value/release-info)
 (s/def ::genres ::value/genres)
 (s/def ::runtime (s/nilable ::value/runtime))
-(s/def ::movie-actors (s/nilable ::value/movie-actors))
 (s/def ::poster (s/nilable ::image/image))
 
 (s/def ::movie
   (s/keys :req-un [::movie-id ::uuid ::created-at ::updated-at
-                   ::title ::director-ids
-                   ::release-info ::genres]
-          :opt-un [::runtime ::movie-actors ::poster]))
+                   ::title ::release-info ::genres]
+          :opt-un [::runtime ::poster]))
 
-(defrecord Movie [movie-id uuid title director-ids release-info genres
-                  runtime movie-actors poster
+(defrecord Movie [movie-id uuid title release-info genres
+                  runtime poster
                   created-at updated-at])
 
 (defn create-movie
-  [{:keys [movie-id uuid title director-ids release-info genres
-           runtime movie-actors poster
+  [{:keys [movie-id uuid title release-info genres
+           runtime poster
            created-at updated-at]}]
   (let [movie (map->Movie
-               (cond-> {:movie-id movie-id  
+               (cond-> {:movie-id movie-id
                         :uuid uuid
                         :title title
-                        :director-ids director-ids  
                         :release-info release-info
                         :genres genres
                         :created-at (or created-at (java.util.Date.))
-                        :updated-at (or updated-at (java.util.Date.))
-                        :movie-actors movie-actors} 
+                        :updated-at (or updated-at (java.util.Date.))}
 
                  runtime
                  (assoc :runtime runtime)
@@ -48,4 +43,3 @@
                  (assoc :poster poster)))]
     (when (s/valid? ::movie movie)
       movie)))
-
