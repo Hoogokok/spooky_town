@@ -167,3 +167,43 @@ SELECT d.*
 FROM directors d
 JOIN director_movies dm ON d.director_id = dm.director_id
 WHERE dm.movie_id = :movie_id AND d.deleted_at IS NULL;
+
+-- 배우 관련 쿼리
+-- :name save-actor! :! :n
+-- :doc 새로운 배우를 생성합니다
+INSERT INTO actors (actor_id, uuid, name, birth_date)
+VALUES (:actor_id, :uuid, :name, :birth_date)
+RETURNING actor_id, uuid, name, birth_date, created_at;
+
+-- :name get-actor-by-id :? :1
+-- :doc ID로 배우를 조회합니다
+SELECT actor_id, uuid, name, birth_date, created_at, updated_at
+FROM actors
+WHERE actor_id = :actor_id AND deleted_at IS NULL;
+
+-- :name get-actor-by-name :? :*
+-- :doc 이름으로 배우를 조회합니다
+SELECT actor_id, uuid, name, birth_date, created_at, updated_at
+FROM actors
+WHERE name = :name AND deleted_at IS NULL;
+
+-- 영화-배우 관계 쿼리
+-- :name save-movie-actor! :! :n
+-- :doc 영화와 배우의 관계를 저장합니다
+INSERT INTO movie_actors (movie_id, actor_id, role_name)
+VALUES (:movie_id, :actor_id, :role_name)
+RETURNING movie_id, actor_id, role_name, created_at;
+
+-- :name get-actors-by-movie-id :? :*
+-- :doc 영화의 출연 배우 목록을 조회합니다
+SELECT a.*, ma.role_name
+FROM actors a
+JOIN movie_actors ma ON a.actor_id = ma.actor_id
+WHERE ma.movie_id = :movie_id AND a.deleted_at IS NULL;
+
+-- :name get-movies-by-actor-id :? :*
+-- :doc 배우의 출연 영화 목록을 조회합니다
+SELECT m.*, ma.role_name
+FROM movies m
+JOIN movie_actors ma ON m.movie_id = ma.movie_id
+WHERE ma.actor_id = :actor_id AND m.deleted_at IS NULL;
