@@ -3,47 +3,61 @@
             [kit.spooky-town.domain.movie.value :as value]
             [kit.spooky-town.domain.common.image :as image]))
 
-;; 식별성 관련 스펙
+;; 엔티티 스펙 - 값 객체 스펙 사용
+(s/def ::movie-id ::value/movie-id)
 (s/def ::uuid uuid?)
-(s/def ::created-at inst?)
-(s/def ::updated-at inst?)
-
-;; 필수 속성 스펙 (값 객체 활용)
+(s/def ::created-at ::value/created-at)
+(s/def ::updated-at ::value/updated-at)
 (s/def ::title ::value/title)
 (s/def ::director-ids ::value/director-ids)
 (s/def ::release-info ::value/release-info)
 (s/def ::genres ::value/genres)
+(s/def ::runtime (s/nilable ::value/runtime))
+(s/def ::movie-actors (s/nilable ::value/movie-actors))
+(s/def ::poster (s/nilable ::image/image))
 
-;; 선택 속성 스펙 (값 객체 활용)
-(s/def ::movie-actors ::value/movie-actors)
-(s/def ::runtime ::value/runtime)
-(s/def ::poster ::image/image)
-
-;; 영화 엔티티 스펙
 (s/def ::movie
-  (s/keys :req-un [::uuid ::created-at ::updated-at
-                   ::title ::director-ids ::release-info ::genres]
-          :opt-un [::movie-actors ::runtime ::poster]))
+  (s/keys :req-un [::movie-id ::uuid ::created-at ::updated-at
+                   ::title ::director-ids
+                   ::release-info ::genres]
+          :opt-un [::runtime ::movie-actors ::poster]))
 
-;; 생성 함수
-(defn create-movie [{:keys [uuid title director-ids release-info genres
-                           movie-actors runtime poster] :as movie}]
-  (let [created-title (value/create-title title)
-        created-director-ids (value/create-director-ids director-ids)
-        created-release-info (value/create-release-info release-info)
-        created-genres (value/create-genres genres)
-        created-movie-actors (when movie-actors (value/create-movie-actors movie-actors))
-        created-runtime (when runtime (value/create-runtime runtime))
-        created-poster (when poster (image/create-image poster))]
-    (when (and uuid created-title created-director-ids created-release-info created-genres)
-      (let [now (java.util.Date.)]
-        (cond-> {:uuid uuid
-                 :created-at now
-                 :updated-at now
-                 :title title
-                 :director-ids director-ids
-                 :release-info release-info
-                 :genres genres}
-          movie-actors (assoc :movie-actors movie-actors)
-          runtime (assoc :runtime runtime)
-          poster (assoc :poster poster)))))) 
+(defn explain-movie
+  "영화 엔티티의 유효성 검증 실패 이유를 반환합니다."
+  [movie]
+  (when-let [ed (s/explain-data ::movie movie)]
+    {:problems (::s/problems ed)
+     :spec (::s/spec ed)
+     :value (::s/value ed)}))
+
+(defrecord Movie [movie-id uuid title director-ids release-info genres
+                  runtime movie-actors poster
+                  created-at updated-at])
+
+(defn create-movie
+  [{:keys [movie-id uuid title director-ids release-info genres
+           runtime movie-actors poster
+           created-at updated-at]}]
+  (let [movie (map->Movie
+               (cond-> {:movie-id movie-id  
+                        :uuid uuid
+                        :title title
+                        :director-ids director-ids  
+                        :release-info release-info
+                        :genres genres
+                        :created-at (or created-at (java.util.Date.))
+                        :updated-at (or updated-at (java.util.Date.))
+                        :movie-actors movie-actors} 
+
+                 runtime
+                 (assoc :runtime runtime)
+
+                 poster
+                 (assoc :poster poster)))]
+    (if (s/valid? ::movie movie)
+      movie
+      (let [validation-error (explain-movie movie)]
+        (println "Movie validation failed:")
+        (println "Problems:" (-> validation-error :problems))
+        nil))))
+
