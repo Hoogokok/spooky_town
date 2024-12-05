@@ -20,7 +20,7 @@
    [kit.spooky-town.infrastructure.auth.jwt-email-token-gateway]
    [kit.spooky-town.infrastructure.auth.bcrypt-gateway]
    [kit.spooky-town.infrastructure.id.ulid]
-
+   [kit.spooky-town.infrastructure.image.cloudinary]
    ;; Database
    [kit.spooky-town.infrastructure.persistence.core]
    [kit.spooky-town.infrastructure.event.memory]
