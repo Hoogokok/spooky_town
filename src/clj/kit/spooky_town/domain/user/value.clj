@@ -1,6 +1,13 @@
 (ns kit.spooky-town.domain.user.value
   (:require [clojure.spec.alpha :as s]))
 
+;; user-id
+(s/def ::user-id string?)
+
+(defn create-user-id [id]
+  (when (s/valid? ::user-id id)
+    id))
+
 ;; Email
 (def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
 (s/def ::email (s/and string? #(re-matches email-regex %)))
