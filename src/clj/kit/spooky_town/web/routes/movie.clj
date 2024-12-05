@@ -1,5 +1,5 @@
 (ns kit.spooky-town.web.routes.movie
-  (:require [kit.spooky-town.web.controller.movie :as movie]
+  (:require [kit.spooky-town.web.controllers.movie :as movie]
             [kit.spooky-town.web.middleware.auth :as auth]))
 
 (def movie-routes
