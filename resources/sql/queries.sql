@@ -101,3 +101,29 @@ UPDATE users
 SET deleted_at = :deleted_at,
     withdrawal_reason = :withdrawal_reason
 WHERE uuid = :uuid
+
+-- :name save-movie! :! :n
+-- :doc 새로운 영화를 생성합니다
+INSERT INTO movies (movie_id, uuid, title, description, release_date)
+VALUES (:movie_id, :uuid, :title, :description, :release_date)
+RETURNING movie_id, uuid, title, description, release_date, created_at;
+
+-- :name get-movie-by-id :? :1
+-- :doc ID로 영화를 조회합니다
+SELECT movie_id, uuid, title, description, release_date, created_at, updated_at
+FROM movies
+WHERE movie_id = :movie_id AND deleted_at IS NULL;
+
+-- :name get-movie-by-uuid :? :1
+-- :doc UUID로 영화를 조회합니다
+SELECT movie_id, uuid, title, description, release_date, created_at, updated_at
+FROM movies
+WHERE uuid = :uuid AND deleted_at IS NULL;
+
+-- :name mark-movie-as-deleted! :! :n
+-- :doc 영화를 소프트 삭제 처리합니다
+UPDATE movies
+SET deleted_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+WHERE movie_id = :movie_id
+RETURNING movie_id, uuid, deleted_at;
