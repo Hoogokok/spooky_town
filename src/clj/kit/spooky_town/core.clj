@@ -19,6 +19,7 @@
    [kit.spooky-town.infrastructure.email.smtp-gateway]
    [kit.spooky-town.infrastructure.auth.jwt-email-token-gateway]
    [kit.spooky-town.infrastructure.auth.bcrypt-gateway]
+   [kit.spooky-town.infrastructure.id.ulid]
 
    ;; Database
    [kit.spooky-town.infrastructure.persistence.core]
@@ -30,7 +31,8 @@
    [kit.spooky-town.infrastructure.persistence.movie-actor]
    ;; Use-cases
    [kit.spooky-town.domain.role-request.use-case]
-   [kit.spooky-town.domain.user.use-case])
+   [kit.spooky-town.domain.user.use-case]
+   [kit.spooky-town.domain.movie.use-case])
 
    (:gen-class))
 

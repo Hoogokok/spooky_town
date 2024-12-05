@@ -116,11 +116,20 @@
   :role-request-repository #ig/ref :infrastructure/role-request-repository
   :event-publisher #ig/ref :infrastructure/event-bus}
 
+ :domain/movie-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :movie-repository #ig/ref :infrastructure/movie-repository
+  :actor-repository #ig/ref :infrastructure/actor-repository
+  :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
+  :event-publisher #ig/ref :infrastructure/event-bus
+  :id-generator #ig/ref :infrastructure/id-generator}
+
  :reitit.routes/api
  {:base-path ""
   :tx-manager #ig/ref :db/tx-manager
   :role-request-use-case #ig/ref :domain/role-request-use-case
-  :user-use-case #ig/ref :domain/user-use-case}
+  :user-use-case #ig/ref :domain/user-use-case
+  :movie-use-case #ig/ref :domain/movie-use-case}
 
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
@@ -151,4 +160,9 @@
  {:datasource #ig/ref :db.sql/connection
   :tx-manager #ig/ref :db/tx-manager
   :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/id-generator
+ {:generator #ig/ref :infrastructure.id/ulid-generator}
+
+ :infrastructure.id/ulid-generator {}
 }
