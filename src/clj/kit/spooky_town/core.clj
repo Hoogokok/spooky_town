@@ -25,6 +25,9 @@
    [kit.spooky-town.infrastructure.event.memory]
    [kit.spooky-town.infrastructure.persistence.role-request]
    [kit.spooky-town.infrastructure.persistence.user]
+   [kit.spooky-town.infrastructure.persistence.movie]
+   [kit.spooky-town.infrastructure.persistence.actor]
+   [kit.spooky-town.infrastructure.persistence.movie-actor]
    ;; Use-cases
    [kit.spooky-town.domain.role-request.use-case]
    [kit.spooky-town.domain.user.use-case])

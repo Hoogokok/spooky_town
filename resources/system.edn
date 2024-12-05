@@ -136,4 +136,19 @@
 
  :infrastructure/email-token-gateway
  {:secret #or [#env EMAIL_TOKEN_SECRET "ANOTHER_SECRET_HERE"]}
+
+ :infrastructure/movie-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/actor-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/movie-actor-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
 }
