@@ -31,7 +31,8 @@
            buddy/buddy-hashers {:mvn/version "2.0.167"}
            clj-time/clj-time {:mvn/version "0.15.2"}
            failjure/failjure {:mvn/version "2.3.0"}
-           com.draines/postal {:mvn/version "2.0.5"}}
+           com.draines/postal {:mvn/version "2.0.5"}
+           alizain/ulid {:mvn/version "2.0.2"}}
 
  :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}}
                    :ns-default build}
