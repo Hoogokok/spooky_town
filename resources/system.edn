@@ -136,6 +136,11 @@
 
  :infrastructure.id/ulid-generator {}
 
+ :infrastructure/cloudinary-storage
+ {:cloud-name #or [#env CLOUDINARY_CLOUD_NAME "your-cloud-name"]
+  :api-key #or [#env CLOUDINARY_API_KEY "your-api-key"]
+  :api-secret #or [#env CLOUDINARY_API_SECRET "your-api-secret"]} 
+
  :domain/user-use-case
  {:with-tx #ig/ref :db/tx-manager
   :user-repository #ig/ref :infrastructure/user-repository
@@ -158,12 +163,12 @@
   :actor-repository #ig/ref :infrastructure/actor-repository
   :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
   :event-publisher #ig/ref :infrastructure/event-bus
-  :id-generator #ig/ref :infrastructure/id-generator}
+  :id-generator #ig/ref :infrastructure/id-generator
+  :image-gateway #ig/ref :infrastructure/cloudinary-storage}
 
  :reitit.routes/api
  {:base-path ""
   :tx-manager #ig/ref :db/tx-manager
   :role-request-use-case #ig/ref :domain/role-request-use-case
   :user-use-case #ig/ref :domain/user-use-case
-  :movie-use-case #ig/ref :domain/movie-use-case}
- }
+  :movie-use-case #ig/ref :domain/movie-use-case}}
