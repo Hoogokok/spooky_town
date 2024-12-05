@@ -1,4 +1,4 @@
-(ns kit.spooky-town.web.controller.movie
+(ns kit.spooky-town.web.controllers.movie
   (:require [kit.spooky-town.domain.movie.use-case :as movie-use-case]
             [ring.util.http-response :as response]
             [failjure.core :as f]))
