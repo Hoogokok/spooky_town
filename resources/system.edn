@@ -1,11 +1,10 @@
-{
- :system/env
+{:system/env
  #profile {:dev  :dev
            :test :test
            :prod :prod}
 
- 
- 
+
+
 
  :server/http
  {:port    #long #or [#env PORT 3000]
@@ -13,7 +12,7 @@
   :handler #ig/ref :handler/ring}
 
  :handler/ring
- {:router                #ig/ref :router/core 
+ {:router                #ig/ref :router/core
   :api-path              "/api"
   :cookie-secret         #or [#env COOKIE_SECRET "NRRVZJLCXQTUOLZC"]
   :site-defaults-config  {:params    {:urlencoded true
@@ -42,20 +41,20 @@
 
  :router/core
  {:routes #ig/ref :router/routes
-  :env #ig/ref :system/env}   
+  :env #ig/ref :system/env}
 
  :db.sql/connection
  #profile
- {:dev  {:dbtype "postgresql"
-         :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_dev"
-         :username "postgres"
-         :password "postgres"}
-  :test {:dbtype "postgresql"
-         :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_test"
-         :username "postgres"
-         :password "postgres"}
-  :prod {:dbtype "postgresql"
-         :jdbc-url #env JDBC_DATABASE_URL}}
+  {:dev  {:dbtype "postgresql"
+          :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_dev"
+          :username "postgres"
+          :password "postgres"}
+   :test {:dbtype "postgresql"
+          :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_test"
+          :username "postgres"
+          :password "postgres"}
+   :prod {:dbtype "postgresql"
+          :jdbc-url #env JDBC_DATABASE_URL}}
 
 
 
@@ -63,30 +62,30 @@
  {:store :database
   :migration-dir "migrations"
   :db #profile
-      {:dev {:dbtype "postgresql"
-             :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_dev"
-             :username "postgres"
-             :password "postgres"}
-       :test {:dbtype "postgresql"
-              :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_test"
+       {:dev {:dbtype "postgresql"
+              :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_dev"
               :username "postgres"
               :password "postgres"}
-       :prod {:dbtype "postgresql"
-              :jdbc-url #env JDBC_DATABASE_URL}}
+        :test {:dbtype "postgresql"
+               :jdbc-url "jdbc:postgresql://localhost:5432/spooky_town_test"
+               :username "postgres"
+               :password "postgres"}
+        :prod {:dbtype "postgresql"
+               :jdbc-url #env JDBC_DATABASE_URL}}
   :migrate-on-init? true}
 
- :db.sql/queries 
+ :db.sql/queries
  {:conn  #ig/ref :db.sql/connection
   :queries ["sql/queries.sql"]
   :options {:quoting :ansi}}
- 
+
  :db/tx-manager
  {:conn #ig/ref :db.sql/connection
   :queries #ig/ref :db.sql/queries}
 
  :auth/jwt
  {:jwt-secret #or [#env JWT_SECRET "DIFFERENT_SECRET_HERE"]
-  :token-expire-hours 24} 
+  :token-expire-hours 24}
 
  :infrastructure/role-request-repository
  {:datasource #ig/ref :db.sql/connection
@@ -99,48 +98,19 @@
  {:datasource #ig/ref :db.sql/connection
   :tx-manager #ig/ref :db/tx-manager
   :queries #ig/ref :db.sql/queries}
- 
+
  :auth/bcrypt-password-gateway {}
-
- :domain/user-use-case
- {:with-tx #ig/ref :db/tx-manager
-  :user-repository #ig/ref :infrastructure/user-repository
-  :event-subscriber #ig/ref :infrastructure/event-bus
-  :password-gateway #ig/ref :auth/bcrypt-password-gateway
-  :token-gateway #ig/ref :auth/jwt
-  :email-gateway #ig/ref :infrastructure/email-gateway
-  :email-token-gateway #ig/ref :infrastructure/email-token-gateway}
-
- :domain/role-request-use-case
- {:with-tx #ig/ref :db/tx-manager
-  :role-request-repository #ig/ref :infrastructure/role-request-repository
-  :event-publisher #ig/ref :infrastructure/event-bus}
-
- :domain/movie-use-case
- {:with-tx #ig/ref :db/tx-manager
-  :movie-repository #ig/ref :infrastructure/movie-repository
-  :actor-repository #ig/ref :infrastructure/actor-repository
-  :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
-  :event-publisher #ig/ref :infrastructure/event-bus
-  :id-generator #ig/ref :infrastructure/id-generator}
-
- :reitit.routes/api
- {:base-path ""
-  :tx-manager #ig/ref :db/tx-manager
-  :role-request-use-case #ig/ref :domain/role-request-use-case
-  :user-use-case #ig/ref :domain/user-use-case
-  :movie-use-case #ig/ref :domain/movie-use-case}
 
  :web.middleware/auth
  {:auth-gateway #ig/ref :auth/jwt}
 
  :infrastructure/email-gateway
  {:smtp-config {:host #or [#env SMTP_HOST "smtp.gmail.com"]
-               :port #long #or [#env SMTP_PORT 587]
-               :user #env SMTP_USER
-               :pass #env SMTP_PASS
-               :tls true
-               :from #or [#env SMTP_FROM "noreply@spookytown.com"]}
+                :port #long #or [#env SMTP_PORT 587]
+                :user #env SMTP_USER
+                :pass #env SMTP_PASS
+                :tls true
+                :from #or [#env SMTP_FROM "noreply@spookytown.com"]}
   :base-url #or [#env BASE_URL "http://localhost:3000"]}
 
  :infrastructure/email-token-gateway
@@ -165,4 +135,35 @@
  {:generator #ig/ref :infrastructure.id/ulid-generator}
 
  :infrastructure.id/ulid-generator {}
-}
+
+ :domain/user-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :user-repository #ig/ref :infrastructure/user-repository
+  :event-subscriber #ig/ref :infrastructure/event-bus
+  :password-gateway #ig/ref :auth/bcrypt-password-gateway
+  :token-gateway #ig/ref :auth/jwt
+  :email-gateway #ig/ref :infrastructure/email-gateway
+  :email-token-gateway #ig/ref :infrastructure/email-token-gateway
+  :email-verification-gateway #ig/ref :infrastructure/email-verification-gateway
+  :id-generator #ig/ref :infrastructure/id-generator}
+
+ :domain/role-request-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :role-request-repository #ig/ref :infrastructure/role-request-repository
+  :event-publisher #ig/ref :infrastructure/event-bus}
+
+ :domain/movie-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :movie-repository #ig/ref :infrastructure/movie-repository
+  :actor-repository #ig/ref :infrastructure/actor-repository
+  :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
+  :event-publisher #ig/ref :infrastructure/event-bus
+  :id-generator #ig/ref :infrastructure/id-generator}
+
+ :reitit.routes/api
+ {:base-path ""
+  :tx-manager #ig/ref :db/tx-manager
+  :role-request-use-case #ig/ref :domain/role-request-use-case
+  :user-use-case #ig/ref :domain/user-use-case
+  :movie-use-case #ig/ref :domain/movie-use-case}
+ }
