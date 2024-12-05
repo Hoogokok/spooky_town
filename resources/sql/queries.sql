@@ -127,3 +127,43 @@ SET deleted_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
 WHERE movie_id = :movie_id
 RETURNING movie_id, uuid, deleted_at;
+
+-- 감독 관련 쿼리
+-- :name save-director! :! :n
+-- :doc 새로운 감독을 생성합니다
+INSERT INTO directors (director_id, uuid, name, birth_date)
+VALUES (:director_id, :uuid, :name, :birth_date)
+RETURNING director_id, uuid, name, birth_date, created_at;
+
+-- :name get-director-by-id :? :1
+-- :doc ID로 감독을 조회합니다
+SELECT director_id, uuid, name, birth_date, created_at, updated_at
+FROM directors
+WHERE director_id = :director_id AND deleted_at IS NULL;
+
+-- :name get-director-by-name :? :*
+-- :doc 이름으로 감독을 조회합니다
+SELECT director_id, uuid, name, birth_date, created_at, updated_at
+FROM directors
+WHERE name = :name AND deleted_at IS NULL;
+
+-- 감독-영화 관계 쿼리
+-- :name save-director-movie! :! :n
+-- :doc 감독과 영화의 관계를 저장합니다
+INSERT INTO director_movies (director_id, movie_id)
+VALUES (:director_id, :movie_id)
+RETURNING director_id, movie_id, created_at;
+
+-- :name get-movies-by-director-id :? :*
+-- :doc 감독이 연출한 영화 목록을 조회합니다
+SELECT m.*
+FROM movies m
+JOIN director_movies dm ON m.movie_id = dm.movie_id
+WHERE dm.director_id = :director_id AND m.deleted_at IS NULL;
+
+-- :name get-directors-by-movie-id :? :*
+-- :doc 영화의 감독 목록을 조회합니다
+SELECT d.*
+FROM directors d
+JOIN director_movies dm ON d.director_id = dm.director_id
+WHERE dm.movie_id = :movie_id AND d.deleted_at IS NULL;
