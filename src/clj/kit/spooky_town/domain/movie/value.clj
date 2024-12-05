@@ -33,11 +33,15 @@
 ;; 입력용 값 객체
 (def max-director-name-length 20)
 (s/def ::director-name (s/and string?
-                              #(pos? (count %))
-                              #(<= (count %) max-director-name-length)))
-(s/def ::director-input (s/keys :req-un [::director-name]))
+                             #(pos? (count %))
+                             #(<= (count %) max-director-name-length)))
+(def max-director-role-length 20)
+(s/def ::director-role (s/and string?
+                             #(pos? (count %))
+                             #(<= (count %) max-director-role-length)))
+(s/def ::director-input (s/keys :req-un [::director-name ::director-role]))
 (s/def ::director-inputs (s/and (s/coll-of ::director-input :kind vector?)
-                                #(pos? (count %))))
+                               #(pos? (count %))))
 
 ;; 저장용 값 객체
 (s/def ::director-id (s/and string? #(not (str/blank? %))))
@@ -154,4 +158,11 @@
 (s/def ::poster ::image/image)
 
 (defn create-poster [poster]
-  (image/create-image poster)) 
+  (image/create-image poster))
+
+(s/def ::movie-director
+  (s/keys :req-un [::director-id ::role]))
+
+(s/def ::movie-directors
+  (s/coll-of ::movie-director :kind vector?))
+  
