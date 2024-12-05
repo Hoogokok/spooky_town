@@ -7,6 +7,7 @@
    [kit.spooky-town.domain.user.test.repository :as user-repository-fixture :refer [->TestUserRepository]]
    [kit.spooky-town.domain.user.test.token-gateway :as token-gateway-fixture :refer [->TestTokenGateway]]
    [kit.spooky-town.domain.user.use-case :refer [->UserUseCaseImpl]]
+   [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]
    [kit.spooky-town.domain.user.test.email-gateway-fixture :as email-gateway-fixture :refer [->TestEmailGateway]]
    [kit.spooky-town.domain.user.test.email-token-gateway-fixture :as email-token-gateway-fixture :refer [->TestEmailTokenGateway]]
    [kit.spooky-town.domain.user.test.email-verification-gateway-fixture :as email-verification-gateway-fixture :refer [->TestEmailVerificationGateway]]
@@ -21,7 +22,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         test-email "test@example.com"
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
@@ -104,7 +106,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
     (testing "비밀번호 초기화 - 성공"

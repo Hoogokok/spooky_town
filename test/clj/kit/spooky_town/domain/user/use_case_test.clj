@@ -11,6 +11,7 @@
              [->TestEmailTokenGateway]]
             [kit.spooky-town.domain.user.test.email-verification-gateway-fixture :as email-verification-gateway-fixture :refer 
              [->TestEmailVerificationGateway]]
+            [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]
             [kit.spooky-town.domain.event :as event]))
 
 (deftest register-user-test
@@ -22,24 +23,28 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)]
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)]
 
     (testing "유효한 데이터로 사용자 등록"
       (with-redefs [password-gateway-fixture/hash-password (fn [_ password] "hashed_password")
                     user-repository-fixture/find-by-email (fn [_ _] nil)
                     user-repository-fixture/save! (fn [_ _] true)
+                    id-generator-fixture/generate-ulid (fn [_] "generated_ulid")
                     token-gateway-fixture/generate (fn [_ _ _] "generated_token")]
         (let [command {:email "test@example.com"
                        :name "Test User"
                        :password "Valid1!password"}
               result (use-case/register-user user-use-case command)]
           (is (f/ok? result))
-(is (uuid? (:user-uuid result)))
+          (is (uuid? (:user-uuid result)))
           (is (= "generated_token" (:token result))))))
 
     (testing "이미 존재하는 이메일로 등록 시도"
       (with-redefs [password-gateway-fixture/hash-password (fn [_ password] "hashed_password")
-                    user-repository-fixture/find-by-email (fn [_ _] {:email "test@example.com"})]
+                    user-repository-fixture/find-by-email
+                    (fn [_ _] {:email "test@example.com"})
+                    id-generator-fixture/generate-ulid (fn [_] "generated_ulid")]
         (let [command {:email "test@example.com"
                        :name "Test User"
                        :password "Valid1!password"}
@@ -56,7 +61,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)]
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)]
 
     (testing "유효한 자격 증명으로 인증"
       (with-redefs [user-repository-fixture/find-by-email 
@@ -114,7 +120,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway) 
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
     (testing "유효한 데이터로 사용자 정보 업데이트"
@@ -183,7 +190,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"]
 
@@ -274,7 +282,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"]
 
     (testing "유효한 비밀번호로 회원 탈퇴"
@@ -334,7 +343,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         admin-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"]
 
@@ -420,7 +430,8 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway)
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator)
         test-uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
         test-email "test@example.com"]
 
@@ -489,14 +500,16 @@
         email-gateway (->TestEmailGateway)
         email-token-gateway (->TestEmailTokenGateway)
         email-verification-gateway (->TestEmailVerificationGateway)
-        user-use-case (->UserUseCaseImpl with-tx 
-                                        password-gateway 
-                                        token-gateway 
-                                        user-repository 
-                                        event-subscriber 
-                                        email-gateway 
-                                        email-token-gateway
-                                        email-verification-gateway)]
+        id-generator (->TestIdGenerator)
+        user-use-case (->UserUseCaseImpl with-tx
+                                         password-gateway
+                                         token-gateway
+                                         user-repository
+                                         event-subscriber
+                                         email-gateway
+                                         email-token-gateway
+                                         email-verification-gateway
+                                         id-generator)]
 
     (testing "이메일 인증 상태 확인 - 인증된 이메일"
       (with-redefs [email-verification-gateway-fixture/get-verification-status 
