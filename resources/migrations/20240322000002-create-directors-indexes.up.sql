@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_directors_name ON directors(name); 
