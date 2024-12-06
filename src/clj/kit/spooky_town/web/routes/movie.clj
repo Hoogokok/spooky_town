@@ -2,7 +2,7 @@
   (:require [kit.spooky-town.web.controllers.movie :as movie]
             [kit.spooky-town.web.middleware.auth :as auth]))
 
-(def movie-routes
+(def movie-routes-data
   ["/movies"
    {:swagger {:tags ["movies"]}}
    
@@ -59,4 +59,4 @@
            :handler movie/get-movie-summary}}]])
 
 (defn movie-routes [opts]
-  (movie-routes opts)) 
+  movie-routes-data) 
