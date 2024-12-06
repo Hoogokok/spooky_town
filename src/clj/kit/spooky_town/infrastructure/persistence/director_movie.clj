@@ -5,20 +5,20 @@
 
 (defrecord DirectorMovieRepository [datasource tx-manager queries]
   protocol/DirectorMovieRepository
-  (save! [this director-movie]
+  (save-movie-director! [this director-movie]
     (.with-tx tx-manager
               (fn [tx-query-fn]
                 (tx-query-fn (:save-director-movie! queries) datasource director-movie))))
 
-  (find-by-director-id [this director-id]
+  (find-directors-by-movie [this movie-id]
     (.with-read-only tx-manager
                      (fn [tx-query-fn]
-                       (tx-query-fn (:get-movies-by-director-id queries) datasource {:director_id director-id}))))
+                       (tx-query-fn (:get-directors-by-movie-id queries) datasource {:movie_id movie-id}))))
 
-  (find-by-movie-id [this movie-id]
+  (find-movies-by-director [this director-id]
     (.with-read-only tx-manager
                      (fn [tx-query-fn]
-                       (tx-query-fn (:get-directors-by-movie-id queries) datasource {:movie_id movie-id})))))
+                       (tx-query-fn (:get-movies-by-director-id queries) datasource {:director_id director-id})))))
 
 (defmethod ig/init-key :infrastructure/director-movie-repository
   [_ {:keys [datasource tx-manager queries]}]

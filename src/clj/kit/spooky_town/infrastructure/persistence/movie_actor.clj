@@ -5,17 +5,17 @@
 
 (defrecord MovieActorRepository [datasource tx-manager queries]
   protocol/MovieActorRepository
-  (save! [this movie-actor]
+  (save-movie-actor! [this movie-actor]
     (.with-tx tx-manager
       (fn [tx-query-fn]
         (tx-query-fn (:save-movie-actor! queries) datasource movie-actor))))
 
-  (find-by-movie-id [this movie-id]
+  (find-actors-by-movie [this movie-id]
     (.with-read-only tx-manager
       (fn [tx-query-fn]
         (tx-query-fn (:get-actors-by-movie-id queries) datasource {:movie_id movie-id}))))
 
-  (find-by-actor-id [this actor-id]
+  (find-movies-by-actor [this actor-id]
     (.with-read-only tx-manager
       (fn [tx-query-fn]
         (tx-query-fn (:get-movies-by-actor-id queries) datasource {:actor_id actor-id})))))
