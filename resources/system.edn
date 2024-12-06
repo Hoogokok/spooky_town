@@ -144,10 +144,6 @@
  :infrastructure/email-verification-gateway
  {:secret #or [#env EMAIL_VERIFICATION_SECRET "VERIFICATION_SECRET_HERE"]}
 
-
- :infrastructure/id-generator
- {:generator #ig/ref :infrastructure/ulid-generator}
-
  :infrastructure/ulid-generator {}
 
  :infrastructure/cloudinary-storage
@@ -164,7 +160,7 @@
   :email-gateway #ig/ref :infrastructure/email-gateway
   :email-token-gateway #ig/ref :infrastructure/email-token-gateway
   :email-verification-gateway #ig/ref :infrastructure/email-verification-gateway
-  :id-generator #ig/ref :infrastructure/id-generator}
+  :id-generator #ig/ref :infrastructure/ulid-generator}
 
  :domain/role-request-use-case
  {:with-tx #ig/ref :db/tx-manager
@@ -179,7 +175,7 @@
   :movie-director-repository #ig/ref :infrastructure/movie-director-repository
   :director-repository #ig/ref :infrastructure/director-repository
   :event-publisher #ig/ref :infrastructure/event-bus
-  :id-generator #ig/ref :infrastructure/id-generator
+  :id-generator #ig/ref :infrastructure/ulid-generator
   :image-gateway #ig/ref :infrastructure/cloudinary-storage}
 
  :domain/movie-query-service
