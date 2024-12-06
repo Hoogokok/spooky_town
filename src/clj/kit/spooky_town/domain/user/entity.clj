@@ -4,7 +4,8 @@
 
 ;; Entity Spec
 (s/def ::user
-  (s/keys :req-un [::value/uuid
+  (s/keys :req-un [::value/user-id
+                   ::value/uuid
                    ::value/email
                    ::value/name
                    ::value/hashed-password
@@ -17,7 +18,8 @@
 ;; User 도메인 로직을 위한 프로토콜
 
 
-(defrecord User [uuid
+(defrecord User [user-id
+                 uuid
                  email
                  name
                  hashed-password
@@ -29,19 +31,23 @@
 )
 
 (defn create-user
-  [{:keys [uuid email name hashed-password roles
+  [{:keys [user-id
+           uuid email name hashed-password roles
            created-at updated-at deleted-at withdrawal-reason]
     :or {created-at (value/create-timestamp)
          roles #{:user}}}]
-  (map->User {:uuid uuid
-              :email email
-              :name name
-              :hashed-password hashed-password
-              :roles roles
-              :created-at created-at
-              :updated-at updated-at
-              :deleted-at deleted-at
-              :withdrawal-reason withdrawal-reason}))
+  (let [user (map->User {:user-id user-id
+                        :uuid uuid
+                        :email email
+                        :name name
+                        :hashed-password hashed-password
+                        :roles roles
+                        :created-at created-at
+                        :updated-at updated-at
+                        :deleted-at deleted-at
+                        :withdrawal-reason withdrawal-reason})]
+    (when (s/valid? ::user user)
+      user)))
 
 ;; Entity Operations
 (defn update-email

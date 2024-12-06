@@ -19,15 +19,20 @@
    [kit.spooky-town.infrastructure.email.smtp-gateway]
    [kit.spooky-town.infrastructure.auth.jwt-email-token-gateway]
    [kit.spooky-town.infrastructure.auth.bcrypt-gateway]
-
+   [kit.spooky-town.infrastructure.id.ulid]
+   [kit.spooky-town.infrastructure.image.cloudinary]
    ;; Database
    [kit.spooky-town.infrastructure.persistence.core]
    [kit.spooky-town.infrastructure.event.memory]
    [kit.spooky-town.infrastructure.persistence.role-request]
    [kit.spooky-town.infrastructure.persistence.user]
+   [kit.spooky-town.infrastructure.persistence.movie]
+   [kit.spooky-town.infrastructure.persistence.actor]
+   [kit.spooky-town.infrastructure.persistence.movie-actor]
    ;; Use-cases
    [kit.spooky-town.domain.role-request.use-case]
-   [kit.spooky-town.domain.user.use-case])
+   [kit.spooky-town.domain.user.use-case]
+   [kit.spooky-town.domain.movie.use-case])
 
    (:gen-class))
 

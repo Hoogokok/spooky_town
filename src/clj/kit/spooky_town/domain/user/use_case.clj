@@ -14,7 +14,8 @@
                                                             find-by-uuid
                                                             find-id-by-uuid
                                                             save!]]
-   [kit.spooky-town.domain.user.value :as value]))
+   [kit.spooky-town.domain.user.value :as value]
+   [kit.spooky-town.domain.common.id.protocol :as id-generator]))
 
 (defprotocol UserUseCase
   (register-user [this command]
@@ -56,11 +57,12 @@
 
 (defrecord DeleteUserCommand [admin-uuid user-uuid reason])
 
-(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway]
+(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator]
   UserUseCase
   (register-user [_ {:keys [email name password]}]
     (f/attempt-all
      [uuid (random-uuid)
+      user-id (id-generator/generate-ulid id-generator)
       created-at (java.util.Date.)
       email' (or (value/create-email email)
                  (f/fail :registration-error/invalid-email))
@@ -71,13 +73,14 @@
       hashed-password (or (password-gateway/hash-password password-gateway password')
                           (f/fail :registration-error/password-hashing-failed))
       _ (with-tx
-         user-repository                ;; 첫 번째 인자: repository
-         (fn [repo]                     ;; 두 번째 인자: 실행할 함수
+         user-repository
+         (fn [repo]
            (f/attempt-all
             [_ (when-not (nil? (find-by-email repo email'))
                  (f/fail :registration-error/email-already-exists))
              user (entity/create-user
-                   {:uuid uuid
+                   {:user-id user-id
+                    :uuid uuid
                     :email email'
                     :name name'
                     :hashed-password hashed-password
@@ -204,7 +207,8 @@
                (fn [{:keys [user-id role]}]
                  (update-user-role this {:user-id user-id :role role}))))
 
-  (withdraw [_ {:keys [user-uuid password reason]}]
+  (withdraw 
+   [_ {:keys [user-uuid password reason]}] 
     (f/attempt-all
      [password' (or (value/create-password password)
                    (f/fail :withdrawal-error/invalid-password))
@@ -226,14 +230,14 @@
 
   (delete-user [_ {:keys [admin-uuid user-uuid reason]}]
     (f/attempt-all
-     [admin (or (find-by-id user-repository admin-uuid)
+     [admin (or (find-by-uuid user-repository admin-uuid)
                 (f/fail :delete-error/admin-not-found))
       _ (when-not (admin? admin)
           (f/fail :delete-error/insufficient-permissions))
       result (with-tx user-repository
                (fn [repo]
                  (f/attempt-all
-                  [user (or (find-by-id repo user-uuid)
+                  [user (or (find-by-uuid repo user-uuid)
                             (f/fail :delete-error/user-not-found))
                    _ (when (:deleted-at user)
                        (f/fail :delete-error/already-withdrawn))
@@ -282,5 +286,5 @@
           (f/fail :email-verification/not-verified))))))
 
 (defmethod ig/init-key :domain/user-use-case
-  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway]}]
-  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway))
+  [_ {:keys [with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator]}]
+  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator))

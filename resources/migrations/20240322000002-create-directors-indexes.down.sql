@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_directors_name; 
