@@ -57,6 +57,6 @@
         (when-let [movie (movie-repo/find-by-id movie-repository (:movie-id params))]
           (entity/->summary movie))))))
 
-(defmethod ig/init-key :infrastructure/movie-query-service
+(defmethod ig/init-key :domain/movie-query-service
   [_ {:keys [movie-repository movie-actor-repository movie-director-repository tx-manager]}]
   (->MovieQueryServiceImpl movie-repository movie-actor-repository movie-director-repository tx-manager))
