@@ -32,7 +32,9 @@
    ;; Use-cases
    [kit.spooky-town.domain.role-request.use-case]
    [kit.spooky-town.domain.user.use-case]
-   [kit.spooky-town.domain.movie.use-case])
+   [kit.spooky-town.domain.movie.use-case]
+   ;; Query Services
+   [kit.spooky-town.domain.movie.query.service])
 
    (:gen-class))
 
