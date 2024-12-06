@@ -43,3 +43,16 @@
                  (assoc :poster poster)))]
     (when (s/valid? ::movie movie)
       movie)))
+
+;; 조회용 요약 정보 변환
+(defn ->summary [{:keys [movie-id title poster release-date genres
+                         directors release-status] :as movie}]
+  (when (and movie-id title poster release-date
+             genres directors release-status)
+    {:movie-id movie-id
+     :title title
+     :poster-url (:url poster)
+     :release-date release-date
+     :genres genres
+     :director-names (mapv :name directors)
+     :release-status release-status}))
