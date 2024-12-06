@@ -1,6 +1,5 @@
 (ns kit.spooky-town.infrastructure.persistence.movie-actor
-  (:require [kit.spooky-town.domain.movie-actor.repository.protocol :as protocol]
-            [kit.spooky-town.infrastructure.persistence.transaction :refer [TransactionManager]]
+  (:require [kit.spooky-town.domain.movie-actor.repository.protocol :as protocol] 
             [integrant.core :as ig]))
 
 (defrecord MovieActorRepository [datasource tx-manager queries]
