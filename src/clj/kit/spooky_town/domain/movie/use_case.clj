@@ -88,5 +88,5 @@
           ;; 검증 실패 시
           (f/fail "필수 필드가 유효하지 않습니다."))))))
 
-(defmethod ig/init-key ::create-movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator]}]
+(defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator]}]
   (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator))
