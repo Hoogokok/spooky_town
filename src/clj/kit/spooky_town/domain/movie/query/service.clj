@@ -3,7 +3,7 @@
             [kit.spooky-town.domain.movie.entity :as entity]
             [kit.spooky-town.domain.movie.repository.protocol :as movie-repo]
             [kit.spooky-town.domain.movie-actor.repository.protocol :as movie-actor-repo]
-            [kit.spooky-town.domain.movie-director.repository.protocol :as director-movie-repo] 
+            [kit.spooky-town.domain.movie-director.repository.protocol :as movie-director-repo] 
             [integrant.core :as ig]))
 
 (defprotocol MovieQueryService
@@ -28,7 +28,7 @@
     "영화 요약 정보를 조회합니다.
      params: {:movie-id string?}"))
 
-(defrecord MovieQueryServiceImpl [movie-repository movie-actor-repository director-movie-repository tx-manager]
+(defrecord MovieQueryServiceImpl [movie-repository movie-actor-repository movie-director-repository tx-manager]
   MovieQueryService
   (find-movie [_ params]
     (.with-read-only tx-manager
@@ -39,7 +39,7 @@
             (assoc :actors (movie-actor-repo/find-actors-by-movie movie-actor-repository (:movie-id params)))
             
             (:include-directors params)
-            (assoc :directors (director-movie-repo/find-directors-by-movie director-movie-repository (:movie-id params))))))))
+            (assoc :directors (movie-director-repo/find-directors-by-movie movie-director-repository (:movie-id params))))))))
 
   (search-movies [_ params]
     (.with-read-only tx-manager
@@ -58,5 +58,5 @@
           (entity/->summary movie))))))
 
 (defmethod ig/init-key :infrastructure/movie-query-service
-  [_ {:keys [movie-repository movie-actor-repository director-movie-repository tx-manager]}]
-  (->MovieQueryServiceImpl movie-repository movie-actor-repository director-movie-repository tx-manager))
+  [_ {:keys [movie-repository movie-actor-repository movie-director-repository tx-manager]}]
+  (->MovieQueryServiceImpl movie-repository movie-actor-repository movie-director-repository tx-manager))
