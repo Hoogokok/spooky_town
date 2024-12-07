@@ -29,7 +29,7 @@
 (defmethod ig/init-key :infrastructure/cloudinary-storage
   [_ {:keys [cloud-name api-key api-secret]}]
   (->CloudinaryImageStorage
-   (new Cloudinary (ObjectUtils/asMap
-                    "cloud_name" cloud-name
-                    "api_key" api-key
-                    "api_secret" api-secret)))) 
+   (new Cloudinary (ObjectUtils/asMap (object-array
+                                     ["cloud_name" cloud-name
+                                      "api_key" api-key
+                                      "api_secret" api-secret]))))) 

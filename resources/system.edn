@@ -131,15 +131,25 @@
   :tx-manager #ig/ref :db/tx-manager
   :queries #ig/ref :db.sql/queries}
 
- :infrastructure/id-generator
- {:generator #ig/ref :infrastructure.id/ulid-generator}
+ :infrastructure/movie-director-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
 
- :infrastructure.id/ulid-generator {}
+ :infrastructure/director-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/email-verification-gateway
+ {:secret #or [#env EMAIL_VERIFICATION_SECRET "VERIFICATION_SECRET_HERE"]}
+
+ :infrastructure/ulid-generator {}
 
  :infrastructure/cloudinary-storage
  {:cloud-name #or [#env CLOUDINARY_CLOUD_NAME "your-cloud-name"]
   :api-key #or [#env CLOUDINARY_API_KEY "your-api-key"]
-  :api-secret #or [#env CLOUDINARY_API_SECRET "your-api-secret"]} 
+  :api-secret #or [#env CLOUDINARY_API_SECRET "your-api-secret"]}
 
  :domain/user-use-case
  {:with-tx #ig/ref :db/tx-manager
@@ -150,7 +160,7 @@
   :email-gateway #ig/ref :infrastructure/email-gateway
   :email-token-gateway #ig/ref :infrastructure/email-token-gateway
   :email-verification-gateway #ig/ref :infrastructure/email-verification-gateway
-  :id-generator #ig/ref :infrastructure/id-generator}
+  :id-generator #ig/ref :infrastructure/ulid-generator}
 
  :domain/role-request-use-case
  {:with-tx #ig/ref :db/tx-manager
@@ -162,9 +172,18 @@
   :movie-repository #ig/ref :infrastructure/movie-repository
   :actor-repository #ig/ref :infrastructure/actor-repository
   :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
+  :movie-director-repository #ig/ref :infrastructure/movie-director-repository
+  :director-repository #ig/ref :infrastructure/director-repository
   :event-publisher #ig/ref :infrastructure/event-bus
-  :id-generator #ig/ref :infrastructure/id-generator
+  :id-generator #ig/ref :infrastructure/ulid-generator
   :image-gateway #ig/ref :infrastructure/cloudinary-storage}
+
+ :domain/movie-query-service
+ {:movie-repository #ig/ref :infrastructure/movie-repository
+  :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
+  :movie-director-repository #ig/ref :infrastructure/movie-director-repository
+  :tx-manager #ig/ref :db/tx-manager}
+
 
  :reitit.routes/api
  {:base-path ""
@@ -172,3 +191,4 @@
   :role-request-use-case #ig/ref :domain/role-request-use-case
   :user-use-case #ig/ref :domain/user-use-case
   :movie-use-case #ig/ref :domain/movie-use-case}}
+
