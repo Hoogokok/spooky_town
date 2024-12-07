@@ -207,3 +207,28 @@ SELECT m.*, ma.role_name
 FROM movies m
 JOIN movie_actors ma ON m.movie_id = ma.movie_id
 WHERE ma.actor_id = :actor_id AND m.deleted_at IS NULL;
+
+-- Role 관련 쿼리
+-- :name save-role! :! :n
+-- :doc 새로운 역할을 생성합니다
+INSERT INTO roles (role_id, role_name, description)
+VALUES (:role-id, :role-name, :description)
+RETURNING role_id, role_name, description, created_at;
+
+-- :name get-role-by-id :? :1
+-- :doc ID로 역할을 조회합니다
+SELECT role_id, role_name, description, created_at, updated_at
+FROM roles
+WHERE role_id = :role-id;
+
+-- :name get-role-by-name :? :1
+-- :doc 이름으로 역할을 조회합니다
+SELECT role_id, role_name, description, created_at, updated_at
+FROM roles
+WHERE role_name = :role-name;
+
+-- :name get-all-roles :? :*
+-- :doc 모든 역할을 조회합니다
+SELECT role_id, role_name, description, created_at, updated_at
+FROM roles
+ORDER BY created_at ASC;
