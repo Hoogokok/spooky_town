@@ -40,21 +40,22 @@ DELETE FROM users
 WHERE user_id = :user_id;
 
 -- :name add-user-role! :! :n
--- :doc 사용자에게 역할을 추가합니다
-INSERT INTO user_roles (user_id, role)
-VALUES (:user_id, :role)
-RETURNING user_id, role, created_at;
+-- :doc 사용자에게 역할을 할당합니다
+INSERT INTO user_roles (user_id, role_id)
+VALUES (:user_id, :role_id)
+RETURNING user_id, role_id, created_at;
 
 -- :name get-user-roles :? :*
 -- :doc 사용자의 모든 역할을 조회합니다
-SELECT role
-FROM user_roles
-WHERE user_id = :user_id;
+SELECT r.*
+FROM roles r
+JOIN user_roles ur ON r.role_id = ur.role_id
+WHERE ur.user_id = :user-id;
 
 -- :name remove-user-role! :! :n
 -- :doc 사용자의 역할을 제거합니다
 DELETE FROM user_roles
-WHERE user_id = :user_id AND role = :role;
+WHERE user_id = :user-id AND role_id = :role-id;
 
 -- :name insert-role-request! :! :n
 -- :doc 새로운 역할 요청을 삽입합니다
@@ -232,3 +233,10 @@ WHERE role_name = :role-name;
 SELECT role_id, role_name, description, created_at, updated_at
 FROM roles
 ORDER BY created_at ASC;
+
+-- :name get-role-users :? :*
+-- :doc 특정 역할을 가진 모든 사용자를 조회합니다
+SELECT u.*
+FROM users u
+JOIN user_roles ur ON u.user_id = ur.user_id
+WHERE ur.role_id = :role-id AND u.deleted_at IS NULL;
