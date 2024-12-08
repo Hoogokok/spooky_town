@@ -1,6 +1,8 @@
 (ns kit.spooky-town.domain.role-request.use-case
   (:require [kit.spooky-town.domain.role-request.repository.protocol :as repository]
             [kit.spooky-town.domain.user.repository.protocol :as user-repository]
+            [kit.spooky-town.domain.user-role.repository.protocol :as user-role-repository]
+            [kit.spooky-town.domain.role.repository.protocol :as role-repository]
             [kit.spooky-town.domain.role-request.entity :as entity]
             [kit.spooky-town.domain.event :as event]
             [failjure.core :as f]
@@ -14,7 +16,7 @@
   (get-user-requests [this command])
   (get-pending-requests [this]))
 
-(defrecord RoleRequestUseCaseImpl [with-tx role-request-repository user-repository event-publisher]
+(defrecord RoleRequestUseCaseImpl [with-tx role-request-repository user-repository user-role-repository role-repository event-publisher]
   RoleRequestUseCase
   (request-role-change [_ {:keys [user-uuid role reason]}]
     (with-tx
@@ -22,8 +24,13 @@
         (f/attempt-all
          [user-id (or (user-repository/find-id-by-uuid user-repository user-uuid)
                      (f/fail :user/not-found))
+          user-role (or (first (user-role-repository/find-roles-by-user user-role-repository user-id))
+                       (f/fail :user/role-not-found))
+          current-role (or (role-repository/find-by-id role-repository (:role-id user-role))
+                          (f/fail :role/not-found))
           request (or (entity/create-role-request
                        {:user-id user-id
+                        :current-role (:role-name current-role)
                         :requested-role role
                         :reason reason})
                      (f/fail :role-request/invalid-request))
@@ -89,5 +96,5 @@
         (repository/find-all-pending role-request-repository)))))
 
 (defmethod ig/init-key :domain/role-request-use-case
-  [_ {:keys [with-tx role-request-repository user-repository event-publisher]}]
-  (->RoleRequestUseCaseImpl with-tx role-request-repository user-repository event-publisher))
+  [_ {:keys [with-tx role-request-repository user-repository user-role-repository role-repository event-publisher]}]
+  (->RoleRequestUseCaseImpl with-tx role-request-repository user-repository user-role-repository role-repository event-publisher))
