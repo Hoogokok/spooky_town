@@ -51,20 +51,22 @@
 
 (deftest movie-query-service-test
   (let [tx-manager (reify tx/TransactionManager
-                     (with-tx [_ f] (f identity))
-                     (with-read-only [_ f] (f identity)))
+                    (with-transaction [_ repositories f]
+                      (apply f repositories))
+                    (with-read-only-transaction [_ repositories f]
+                      (apply f repositories)))
 
         service (sut/->MovieQueryServiceImpl
-                 (->TestMovieRepository)
-                 (->TestMovieActorRepository)
-                 (->TestMovieDirectorRepository)
-                 tx-manager)]
+                (->TestMovieRepository)
+                (->TestMovieActorRepository)
+                (->TestMovieDirectorRepository)
+                tx-manager)]
 
     (testing "영화 상세 정보 조회"
       (testing "모든 관계 정보 포함"
         (let [result (sut/find-movie service {:movie-id "MOVIE123"
-                                              :include-actors true
-                                              :include-directors true})]
+                                             :include-actors true
+                                             :include-directors true})]
           (is (= "MOVIE123" (:movie-id result)))
           (is (= "스크림" (:title result)))
           (is (= actors-fixture (:actors result)))
@@ -78,8 +80,8 @@
 
     (testing "영화 목록 검색"
       (let [result (sut/search-movies service {:page 1
-                                               :sort-by :title
-                                               :sort-order :asc})]
+                                              :sort-by :title
+                                              :sort-order :asc})]
         (is (= 1 (:total-count result)))
         (is (= 1 (:total-pages result)))
         (is (= 1 (count (:movies result))))
