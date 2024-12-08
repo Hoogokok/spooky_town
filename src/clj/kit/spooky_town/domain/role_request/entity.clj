@@ -1,13 +1,13 @@
 (ns kit.spooky-town.domain.role-request.entity
   (:require [kit.spooky-town.domain.role-request.value :as value]
-            [kit.spooky-town.domain.user.value :as user-value]
+            [kit.spooky-town.domain.role.value :as role-value]
             [clojure.spec.alpha :as s]))
 
 ;; Specs
 (s/def ::id pos-int?)                    ;; 내부 ID (DB)
 (s/def ::uuid uuid?)                     ;; 외부 노출용 ID
 (s/def ::user-id pos-int?)
-(s/def ::requested-role ::user-value/role)
+(s/def ::requested-role ::role-value/role-name)
 (s/def ::reason ::value/reason)
 (s/def ::status ::value/status)
 (s/def ::created-at ::value/created-at)
