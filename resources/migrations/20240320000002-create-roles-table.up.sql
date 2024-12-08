@@ -15,5 +15,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 INSERT INTO roles (role_id, role_name, description) VALUES
 ('01HQ5K4Y6Z0000000000000001', 'user', '일반 사용자'),
 ('01HQ5K4Y6Z0000000000000002', 'admin', '관리자'),
-('01HQ5K4Y6Z0000000000000003', 'moderator', '중재자')
+('01HQ5K4Y6Z0000000000000003', 'sns_publisher', 'SNS 게시자'),
+('01HQ5K4Y6Z0000000000000004', 'content_creator', '컨텐츠 크리에이터'),
+('01HQ5K4Y6Z0000000000000005', 'content_reviewer', '컨텐츠 리뷰어')
 ON CONFLICT DO NOTHING;
