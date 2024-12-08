@@ -2,6 +2,12 @@
   (:require [integrant.core :as ig]
             [next.jdbc :as jdbc]))
 
+(def ^:private default-isolation-level :read-committed)
+(def ^:private default-tx-opts
+  {:isolation default-isolation-level})
+(def ^:private default-read-only-tx-opts
+  (assoc default-tx-opts :read-only true))
+
 (defprotocol UpdateQueryFn
   "Repository의 쿼리 함수를 트랜잭션 컨텍스트로 업데이트하기 위한 프로토콜"
   (update-query-fn [this tx-fn]
@@ -16,19 +22,30 @@
 (defrecord PgTransactionManager [conn]
   TransactionManager
   (with-tx [_ repositories f]
-    (jdbc/with-transaction [tx conn {:isolation :read-committed}]
-      (let [tx-fn (fn [sql params opts]
-                    (jdbc/execute-one! tx (into [sql] params) opts))
-            updated-repos (map #(update-query-fn % tx-fn) repositories)]
-        (apply f updated-repos))))
+    (try
+      (jdbc/with-transaction [tx conn default-tx-opts]
+        (let [tx-fn (fn [sql params opts]
+                     (jdbc/execute! tx (into [sql] params) opts))
+              updated-repos (mapv #(update-query-fn % tx-fn) repositories)]
+          (apply f updated-repos)))
+      (catch Exception e
+        (throw (ex-info "Transaction failed"
+                       {:type :transaction/failed
+                        :cause (.getMessage e)}
+                       e)))))
   
   (with-read-only [_ repositories f]
-    (jdbc/with-transaction [tx conn {:isolation :read-committed
-                                    :read-only true}]
-      (let [tx-fn (fn [sql params opts]
-                    (jdbc/execute-one! tx (into [sql] params) opts))
-            updated-repos (map #(update-query-fn % tx-fn) repositories)]
-        (apply f updated-repos)))))
+    (try
+      (jdbc/with-transaction [tx conn default-read-only-tx-opts]
+        (let [tx-fn (fn [sql params opts]
+                     (jdbc/execute! tx (into [sql] params) opts))
+              updated-repos (mapv #(update-query-fn % tx-fn) repositories)]
+          (apply f updated-repos)))
+      (catch Exception e
+        (throw (ex-info "Read-only transaction failed"
+                       {:type :transaction/failed
+                        :cause (.getMessage e)}
+                       e))))))
 
 (defmethod ig/init-key :db/tx-manager [_ {:keys [conn]}]
   (->PgTransactionManager conn)) 
