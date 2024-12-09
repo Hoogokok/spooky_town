@@ -40,4 +40,13 @@
 
 ;; 유효성 검사
 (defn valid? [theater]
-  (s/valid? ::theater theater)) 
+  (s/valid? ::theater theater))
+
+;; 업데이트 함수
+(defn update-theater [theater {:keys [chain-type]}]
+  (when-let [validated-chain (value/create-chain-type chain-type)]
+    (let [updated-theater (assoc theater
+                                :chain-type validated-chain
+                                :updated-at (value/create-timestamp))]
+      (when (valid? updated-theater)
+        updated-theater)))) 

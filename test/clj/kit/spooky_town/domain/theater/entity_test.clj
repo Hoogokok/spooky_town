@@ -51,11 +51,39 @@
 
   (testing "각 체인 타입별 극장 생성 검증"
     (doseq [chain-type [:cgv :megabox :lotte]]
-      (testing (str chain-type " 체인 ��입으로 극장 생성")
+      (testing (str chain-type " 체인 타입으로 극장 생성")
         (let [theater (entity/create-theater
                        {:theater-id "01HQ1234567890ABCDEFGHJKLM"
                         :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
                         :chain-type chain-type})]
           (is (some? theater))
           (is (= chain-type (:chain-type theater)))
-          (is (entity/valid? theater))))))) 
+          (is (entity/valid? theater)))))))
+
+(deftest update-theater-test
+  (testing "극장 정보 업데이트"
+    (let [theater (entity/create-theater
+                   {:theater-id "01HQ1234567890ABCDEFGHJKLM"
+                    :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+                    :chain-type :cgv})]
+
+      (testing "체인 타입 변경"
+        (let [updated (entity/update-theater theater {:chain-type :megabox})]
+          (testing "성공적으로 업데이트됨"
+            (is (some? updated))
+            (is (= :megabox (:chain-type updated)))
+            (is (= (:theater-id theater) (:theater-id updated)))
+            (is (= (:uuid theater) (:uuid updated)))
+            (is (= (:created-at theater) (:created-at updated)))
+            (is (instance? java.util.Date (:updated-at updated))))))
+
+      (testing "잘못된 체인 타입으로 업데이트 시도"
+        (let [updated (entity/update-theater theater {:chain-type :invalid-chain})]
+          (is (nil? updated))))
+
+      (testing "업데이트 시간이 갱신됨"
+        (let [before-update (:updated-at theater)
+              _ (Thread/sleep 1)  ; 시간 차이를 보장하기 위해
+              updated (entity/update-theater theater {:chain-type :megabox})]
+          (is (> (.getTime (:updated-at updated))
+                 (.getTime before-update)))))))) 
