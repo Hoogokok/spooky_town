@@ -14,6 +14,7 @@
    ;; Routes
    [kit.spooky-town.web.routes.api]
    [kit.spooky-town.web.middleware.auth]
+   [kit.spooky-town.web.middleware.multipart]
 
    ;; Infrastructure
    [kit.spooky-town.infrastructure.email.smtp-gateway]
