@@ -64,7 +64,8 @@
 
 (deftest status-check-test
   (let [request (entity/create-role-request
-                 {:user-id 1
+                 {:user-id "user-01HQ..."
+                  :current-role :user
                   :requested-role :content-creator
                   :reason "I want to help moderate the community."})]
     
@@ -74,13 +75,13 @@
       (is (not (entity/rejected? request))))
     
     (testing "승인된 요청"
-      (let [approved (entity/approve-request request 2)]
+      (let [approved (entity/approve-request request "admin-01HQ...")]
         (is (not (entity/pending? approved)))
         (is (entity/approved? approved))
         (is (not (entity/rejected? approved)))))
     
     (testing "거절된 요청"
-      (let [rejected (entity/reject-request request 2 "Not enough experience.")]
+      (let [rejected (entity/reject-request request "admin-01HQ..." "Not enough experience.")]
         (is (not (entity/pending? rejected)))
         (is (not (entity/approved? rejected)))
         (is (entity/rejected? rejected)))))) 
