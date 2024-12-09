@@ -183,4 +183,59 @@
             (let [command {:movie-id "test-movie-id"
                           :release-info {:release-status :released
                                        :release-date "2024-13-45"}}]
+              (is (f/failed? (use-case/update-movie movie-use-case command))))))))
+
+    (testing "포스터 업데이트"
+      (testing "유효한 포스터 파일"
+        (with-redefs [movie-repository-fixture/find-by-id (constantly existing-movie)
+                     movie-repository-fixture/save! (fn [_ movie] movie)
+                     image-gateway-fixture/upload (fn [_ file] 
+                                                  {:url "http://example.com/uploaded.jpg"
+                                                   :width 800
+                                                   :height 600})]
+          (let [poster-file {:file-name "test.jpg"
+                            :file-type "jpg"
+                            :file-size 1000000
+                            :width 800
+                            :height 600
+                            :tempfile "temp"}
+                command {:movie-id "test-movie-id"
+                        :poster-file poster-file}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result)))))
+
+      (testing "유효하지 않은 포스터 파일"
+        (with-redefs [movie-repository-fixture/find-by-id (constantly existing-movie)
+                      movie-repository-fixture/save! (fn [_ movie] nil)
+                      ]
+          
+          (testing "지원하지 않는 파일 타입"
+            (let [invalid-file {:file-name "test.gif"
+                              :file-type "gif"
+                              :file-size 1000000
+                              :width 800
+                              :height 600}
+                  command {:movie-id "test-movie-id"
+                          :poster-file invalid-file}]
+              (is (f/failed? (use-case/update-movie movie-use-case command)))))
+
+          (testing "파일 크기 초과"
+            (let [large-file {:file-name "test.jpg"
+                            :file-type "jpg"
+                            :file-size (* 20 1024 1024)  ;; 20MB
+                            :width 800
+                            :height 600}
+                  command {:movie-id "test-movie-id"
+                          :poster-file large-file}]
+              (is (f/failed? (use-case/update-movie movie-use-case command)))))
+
+          (testing "이미지 크기 초과"
+            (let [huge-image {:file-name "test.jpg"
+                            :file-type "jpg"
+                            :file-size 1000000
+                            :width 15000
+                            :height 15000}
+                  command {:movie-id "test-movie-id"
+                          :poster-file huge-image}]
               (is (f/failed? (use-case/update-movie movie-use-case command))))))))))

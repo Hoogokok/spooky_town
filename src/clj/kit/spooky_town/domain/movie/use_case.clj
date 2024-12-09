@@ -27,6 +27,13 @@
                               release-info
                               poster-file])
 
+(defn- process-poster [image-gateway poster-file]
+  (when poster-file
+    (if-let [validated-file (value/create-poster-file poster-file)]
+      (when-let [uploaded (image-gateway/upload image-gateway validated-file)]
+        (value/create-poster uploaded))
+      (f/fail "유효하지 않은 포스터 파일입니다."))))
+
 (defrecord CreateMovieUseCaseImpl [with-tx
                                    movie-repository
                                    movie-director-repository
@@ -101,27 +108,24 @@
           ;; 검증 실패 시
           (f/fail "필수 필드가 유효하지 않습니다.")))))
 
-  (update-movie [_ {:keys [movie-id
-                          title
-                          runtime
-                          genres
-                          release-info
-                          poster-file] :as command}]
+  (update-movie [_ {:keys [movie-id poster-file] :as command}]
     (with-tx movie-repository
       (fn [repo]
         (if-let [movie (movie-repository/find-by-id repo movie-id)]
-          (let [poster (when poster-file
-                        (when-let [validated-file (value/create-poster-file poster-file)]
-                          (when-let [uploaded (image-gateway/upload image-gateway validated-file)]
-                            (value/create-poster uploaded))))
-                update-data (cond-> command
-                            poster (assoc :poster poster)
-                            true (dissoc :poster-file))]
-            (if-let [updated-movie (entity/update-movie movie update-data)]
-              (do
-                (movie-repository/save! repo updated-movie)
-                movie-id)
-              (f/fail "영화 정보 업데이트가 유효하지 않습니다.")))
+          (let [poster-result (process-poster image-gateway poster-file)
+                update-data (cond
+                             (f/failed? poster-result) poster-result
+                             poster-result (-> command
+                                             (assoc :poster poster-result)
+                                             (dissoc :poster-file))
+                             :else (dissoc command :poster-file))]
+            (if (f/failed? update-data)
+              update-data
+              (if-let [updated-movie (entity/update-movie movie update-data)]
+                (do
+                  (movie-repository/save! repo updated-movie)
+                  movie-id)
+                (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
           (f/fail "영화를 찾을 수 없습니다."))))))
 
 (defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator uuid-generator]}]
