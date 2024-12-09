@@ -24,7 +24,8 @@
                               title
                               runtime
                               genres
-                              release-info])
+                              release-info
+                              poster-file])
 
 (defrecord CreateMovieUseCaseImpl [with-tx
                                    movie-repository
@@ -101,18 +102,26 @@
           (f/fail "필수 필드가 유효하지 않습니다.")))))
 
   (update-movie [_ {:keys [movie-id
-                           title
-                           runtime
-                           genres
-                           release-info ] :as command}]
+                          title
+                          runtime
+                          genres
+                          release-info
+                          poster-file] :as command}]
     (with-tx movie-repository
       (fn [repo]
         (if-let [movie (movie-repository/find-by-id repo movie-id)]
-          (if-let [updated-movie (entity/update-movie movie command)]
-            (do
-              (movie-repository/save! repo updated-movie)
-              movie-id)
-            (f/fail "영화 정보 업데이트가 유효하지 않습니다."))
+          (let [poster (when poster-file
+                        (when-let [validated-file (value/create-poster-file poster-file)]
+                          (when-let [uploaded (image-gateway/upload image-gateway validated-file)]
+                            (value/create-poster uploaded))))
+                update-data (cond-> command
+                            poster (assoc :poster poster)
+                            true (dissoc :poster-file))]
+            (if-let [updated-movie (entity/update-movie movie update-data)]
+              (do
+                (movie-repository/save! repo updated-movie)
+                movie-id)
+              (f/fail "영화 정보 업데이트가 유효하지 않습니다.")))
           (f/fail "영화를 찾을 수 없습니다."))))))
 
 (defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator uuid-generator]}]

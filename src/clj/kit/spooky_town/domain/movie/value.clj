@@ -165,4 +165,10 @@
 
 (s/def ::movie-directors
   (s/coll-of ::movie-director :kind vector?))
+
+(s/def ::poster-file (s/merge ::image/upload-file))
+
+(defn create-poster-file [file]
+  (when (s/valid? ::poster-file file)
+    file))
   
