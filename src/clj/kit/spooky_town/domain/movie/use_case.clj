@@ -23,7 +23,8 @@
                                    director-repository
                                    actor-repository
                                    image-gateway
-                                   id-generator]
+                                   id-generator
+                                   uuid-generator]
   MovieUseCase
   (create-movie [_ {:keys [title director-infos release-info genres
                           runtime movie-actor-infos poster-file] :as command}]
@@ -39,6 +40,7 @@
                  (value/create-genres genres))
           ;; 검증 성공 시 기본 필드 추가
           (let [movie-id (id-generator/generate-ulid id-generator)
+                movie-uuid (id-generator/generate-uuid uuid-generator)
                 created-at (java.util.Date.)
                 updated-at created-at
                 validated-runtime (when runtime
@@ -50,10 +52,10 @@
             ;; 영화 저장
             (movie-repository/save! repo 
               (cond-> {:movie-id movie-id
+                      :uuid movie-uuid
                       :title title
                       :release-info release-info
                       :genres genres
-                      :uuid (random-uuid)
                       :created-at created-at
                       :updated-at updated-at}
                 
@@ -88,5 +90,5 @@
           ;; 검증 실패 시
           (f/fail "필수 필드가 유효하지 않습니다."))))))
 
-(defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator]}]
-  (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator))
+(defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator uuid-generator]}]
+  (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator uuid-generator))

@@ -189,6 +189,7 @@
   :director-repository #ig/ref :infrastructure/director-repository
   :event-publisher #ig/ref :infrastructure/event-bus
   :id-generator #ig/ref :infrastructure/ulid-generator
+  :uuid-generator #ig/ref :infrastructure/uuid-generator
   :image-gateway #ig/ref :infrastructure/cloudinary-storage}
 
  :domain/movie-query-service
