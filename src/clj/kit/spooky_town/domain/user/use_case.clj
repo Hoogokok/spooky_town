@@ -60,27 +60,30 @@
 
 (defrecord DeleteUserCommand [admin-uuid user-uuid reason])
 
-(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository user-role-repository role-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator]
+(defrecord UserUseCaseImpl [with-tx password-gateway token-gateway user-repository user-role-repository role-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator uuid-generator]
   UserUseCase
   (register-user [_ {:keys [email name password]}]
     (with-tx [user-repository user-role-repository role-repository]
       (fn [repo user-role-repo role-repo]
         (f/attempt-all
-         [uuid (random-uuid)
-          user-id (id-generator/generate-ulid id-generator)
-          created-at (java.util.Date.)
-          email' (or (value/create-email email)
+         [email' (or (value/create-email email)
                     (f/fail :registration-error/invalid-email))
           name' (or (value/create-name name)
                    (f/fail :registration-error/invalid-name))
           password' (or (value/create-password password)
                        (f/fail :registration-error/invalid-password))
+          ;; 1. 이메일 중복 체크를 먼저 수행
+          _ (when-let [existing-user (find-by-email repo email')]
+              (f/fail :registration-error/email-already-exists))
+          
+          ;; 2. 사용자 생성에 필요한 값들 생성
+          uuid (id-generator/generate-uuid uuid-generator)
+          user-id (id-generator/generate-ulid id-generator)
+          created-at (java.util.Date.)
           hashed-password (or (password-gateway/hash-password password-gateway password')
                              (f/fail :registration-error/password-hashing-failed))
           
           ;; 1. 사용자 생성
-          _ (when-let [existing-user (find-by-email repo email')]
-              (f/fail :registration-error/email-already-exists))
           user (entity/create-user
                 {:user-id user-id
                  :uuid uuid
@@ -218,7 +221,8 @@
     (with-tx [user-repository]
       (fn [repo]
         (f/attempt-all
-         [user-uuid (token-gateway/verify token-gateway token)
+         [user-uuid (or (token-gateway/verify token-gateway token)
+                      (f/fail :password-reset/invalid-token))
           user (or (find-by-uuid repo user-uuid)
                   (f/fail :password-reset/user-not-found))
           _ (when (:deleted-at user)
@@ -318,5 +322,5 @@
           (f/fail :email-verification/not-verified))))))
 
 (defmethod ig/init-key :domain/user-use-case
-  [_ {:keys [with-tx password-gateway token-gateway user-repository user-role-repository role-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator]}]
-  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository user-role-repository role-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator))
+  [_ {:keys [with-tx password-gateway token-gateway user-repository user-role-repository role-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator uuid-generator]}]
+  (->UserUseCaseImpl with-tx password-gateway token-gateway user-repository user-role-repository role-repository event-subscriber email-gateway email-token-gateway email-verification-gateway id-generator uuid-generator))

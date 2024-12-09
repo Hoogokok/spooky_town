@@ -151,16 +151,29 @@
   :api-key #or [#env CLOUDINARY_API_KEY "your-api-key"]
   :api-secret #or [#env CLOUDINARY_API_SECRET "your-api-secret"]}
 
+ :infrastructure/role-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/user-role-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
  :domain/user-use-case
  {:with-tx #ig/ref :db/tx-manager
   :user-repository #ig/ref :infrastructure/user-repository
+  :user-role-repository #ig/ref :infrastructure/user-role-repository
+  :role-repository #ig/ref :infrastructure/role-repository
   :event-subscriber #ig/ref :infrastructure/event-bus
   :password-gateway #ig/ref :auth/bcrypt-password-gateway
   :token-gateway #ig/ref :auth/jwt
   :email-gateway #ig/ref :infrastructure/email-gateway
   :email-token-gateway #ig/ref :infrastructure/email-token-gateway
   :email-verification-gateway #ig/ref :infrastructure/email-verification-gateway
-  :id-generator #ig/ref :infrastructure/ulid-generator}
+  :id-generator #ig/ref :infrastructure/ulid-generator
+  :uuid-generator #ig/ref :infrastructure/uuid-generator}
 
  :domain/role-request-use-case
  {:with-tx #ig/ref :db/tx-manager
@@ -191,4 +204,6 @@
   :role-request-use-case #ig/ref :domain/role-request-use-case
   :user-use-case #ig/ref :domain/user-use-case
   :movie-use-case #ig/ref :domain/movie-use-case}}
+
+ :infrastructure/uuid-generator {}
 
