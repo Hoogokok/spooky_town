@@ -161,4 +161,30 @@
       (testing "잘못된 개봉일"
         (is (nil? (entity/update-movie movie 
                    {:release-info {:release-status :released
-                                 :release-date "2024-13-45"}})))))))
+                                 :release-date "2024-13-45"}}))))) 
+    
+    (testing "포스터 업데이트"
+      (let [new-poster {:url "http://example.com/new-poster.jpg"
+                       :width 800
+                       :height 1200}
+            updates {:poster new-poster}
+            updated (entity/update-movie movie updates)]
+        (is (some? updated))
+        (is (= new-poster (:poster updated)))
+        (is (not= (:updated-at movie) (:updated-at updated)))))
+
+    (testing "포스터를 포함한 복합 업데이트"
+      (let [updates {:title "새로운 제목"
+                    :poster {:url "http://example.com/new-poster.jpg"
+                            :width 800
+                            :height 1200}}
+            updated (entity/update-movie movie updates)]
+        (is (some? updated))
+        (is (= "새로운 제목" (:title updated)))
+        (is (= (:url (:poster updates)) (:url (:poster updated))))
+        (is (not= (:updated-at movie) (:updated-at updated)))))
+
+    (testing "유효하지 않은 포스터 업데이트"
+      (testing "잘못된 포스터 데이터"
+        (is (nil? (entity/update-movie movie 
+                   {:poster {:url ""}})))))))

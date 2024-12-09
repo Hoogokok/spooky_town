@@ -74,12 +74,17 @@
   (when-let [validated-release-info (value/create-release-info new-release-info)]
     (assoc movie :release-info validated-release-info)))
 
-(defn update-movie [movie {:keys [title runtime genres release-info]}]
+(defn- update-poster [movie new-poster]
+  (when-let [validated-poster (value/create-poster new-poster)]
+    (assoc movie :poster validated-poster)))
+
+(defn update-movie [movie {:keys [title runtime genres release-info poster]}]
   (when-let [updated (-> movie
                         (cond-> 
                           title (update-title title)
                           runtime (update-runtime runtime)
                           genres (update-genres genres)
-                          release-info (update-release-info release-info))
+                          release-info (update-release-info release-info)
+                          poster (update-poster poster))
                         (assoc :updated-at (java.util.Date.)))]
     (create-movie updated)))
