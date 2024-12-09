@@ -146,6 +146,9 @@
 
  :infrastructure/ulid-generator {}
 
+ :infrastructure/uuid-generator
+ {:implementation :uuid}
+
  :infrastructure/cloudinary-storage
  {:cloud-name #or [#env CLOUDINARY_CLOUD_NAME "your-cloud-name"]
   :api-key #or [#env CLOUDINARY_API_KEY "your-api-key"]
@@ -205,6 +208,4 @@
   :role-request-use-case #ig/ref :domain/role-request-use-case
   :user-use-case #ig/ref :domain/user-use-case
   :movie-use-case #ig/ref :domain/movie-use-case}}
-
- :infrastructure/uuid-generator {}
 
