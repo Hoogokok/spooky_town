@@ -24,9 +24,13 @@
                  :opt-un [::width ::height])
          ::area))
 
-;; 업로드된 이미지 스펙
-(s/def ::url string?)
+;; 이미지 URL 제약조건
+(def url-pattern #"^https?://.*")
+(s/def ::url (s/and string? 
+                    not-empty 
+                    #(re-matches url-pattern %)))
 
+;; 업로드된 이미지 스펙
 (s/def ::image
   (s/and (s/keys :req-un [::url]
                  :opt-un [::width ::height])
@@ -37,5 +41,6 @@
     file))
 
 (defn create-image [{:keys [url width height] :as image}]
-  (when (s/valid? ::image image)
+  (when (and (s/valid? ::image image)
+             (re-matches url-pattern url))
     image)) 

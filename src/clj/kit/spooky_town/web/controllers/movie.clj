@@ -24,4 +24,12 @@
   (if-let [movie (movie-query/get-movie-summary movie-query-service path-params)]
     (response/ok movie)
     (response/not-found)))
+
+(defn update-movie [{:keys [path-params multipart-params form-params movie-use-case]}]
+  (let [command (cond-> (merge path-params form-params)
+                 (:poster multipart-params) (assoc :poster-file (:poster multipart-params)))
+        result (movie-use-case/update-movie movie-use-case command)]
+    (if (f/failed? result)
+      (response/bad-request {:error (f/message result)})
+      (response/ok {:movie-id result}))))
  

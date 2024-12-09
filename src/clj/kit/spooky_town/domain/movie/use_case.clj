@@ -1,20 +1,38 @@
 (ns kit.spooky-town.domain.movie.use-case
-  (:require [integrant.core :as ig]
-            [failjure.core :as f] 
-            [kit.spooky-town.domain.movie.value :as value]
-            [kit.spooky-town.domain.director.repository.protocol :as director-repository]
-            [kit.spooky-town.domain.common.image.gateway.protocol :as image-gateway]
-            [kit.spooky-town.domain.common.id.protocol :as id-generator]
-            [kit.spooky-town.domain.movie-director.repository.protocol :as movie-director-repository]
-            [kit.spooky-town.domain.movie-actor.repository.protocol :as movie-actor-repository]
-            [kit.spooky-town.domain.actor.repository.protocol :as actor-repository]
-            [kit.spooky-town.domain.movie.repository.protocol :as movie-repository]))
+  (:require
+   [failjure.core :as f]
+   [integrant.core :as ig]
+   [kit.spooky-town.domain.actor.repository.protocol :as actor-repository]
+   [kit.spooky-town.domain.common.id.protocol :as id-generator]
+   [kit.spooky-town.domain.common.image.gateway.protocol :as image-gateway]
+   [kit.spooky-town.domain.director.repository.protocol :as director-repository]
+   [kit.spooky-town.domain.movie-actor.repository.protocol :as movie-actor-repository]
+   [kit.spooky-town.domain.movie-director.repository.protocol :as movie-director-repository]
+   [kit.spooky-town.domain.movie.entity :as entity]
+   [kit.spooky-town.domain.movie.repository.protocol :as movie-repository]
+   [kit.spooky-town.domain.movie.value :as value]))
 
 (defprotocol MovieUseCase
   (create-movie [this command]
-    "새로운 영화를 생성합니다."))
+    "새로운 영화를 생성합니다.")
+  (update-movie [this command]
+    "영화 정보를 업데이트합니다."))
 
 (defrecord CreateMovieCommand [title director-names release-info genres movie-actor-infos runtime poster-file])
+
+(defrecord UpdateMovieCommand [movie-id
+                              title
+                              runtime
+                              genres
+                              release-info
+                              poster-file])
+
+(defn- process-poster [image-gateway poster-file]
+  (when poster-file
+    (if-let [validated-file (value/create-poster-file poster-file)]
+      (when-let [uploaded (image-gateway/upload image-gateway validated-file)]
+        (value/create-poster uploaded))
+      (f/fail "유효하지 않은 포스터 파일입니다."))))
 
 (defrecord CreateMovieUseCaseImpl [with-tx
                                    movie-repository
@@ -88,7 +106,27 @@
             ;; 생성된 영화 ID 반환
             movie-id)
           ;; 검증 실패 시
-          (f/fail "필수 필드가 유효하지 않습니다."))))))
+          (f/fail "필수 필드가 유효하지 않습니다.")))))
+
+  (update-movie [_ {:keys [movie-id poster-file] :as command}]
+    (with-tx movie-repository
+      (fn [repo]
+        (if-let [movie (movie-repository/find-by-id repo movie-id)]
+          (let [poster-result (process-poster image-gateway poster-file)
+                update-data (cond
+                             (f/failed? poster-result) poster-result
+                             poster-result (-> command
+                                             (assoc :poster poster-result)
+                                             (dissoc :poster-file))
+                             :else (dissoc command :poster-file))]
+            (if (f/failed? update-data)
+              update-data
+              (if-let [updated-movie (entity/update-movie movie update-data)]
+                (do
+                  (movie-repository/save! repo updated-movie)
+                  movie-id)
+                (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
+          (f/fail "영화를 찾을 수 없습니다."))))))
 
 (defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator uuid-generator]}]
   (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository director-repository actor-repository image-gateway id-generator uuid-generator))

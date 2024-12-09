@@ -57,3 +57,34 @@
      :director-names (when (:directors movie)
                       (mapv :name (:directors movie)))
      :release-status release-status}))
+
+(defn- update-title [movie new-title]
+  (when-let [validated-title (value/create-title new-title)]
+    (assoc movie :title validated-title)))
+
+(defn- update-runtime [movie new-runtime]
+  (when-let [validated-runtime (value/create-runtime new-runtime)]
+    (assoc movie :runtime validated-runtime)))
+
+(defn- update-genres [movie new-genres]
+  (when-let [validated-genres (value/create-genres new-genres)]
+    (assoc movie :genres validated-genres)))
+
+(defn- update-release-info [movie new-release-info]
+  (when-let [validated-release-info (value/create-release-info new-release-info)]
+    (assoc movie :release-info validated-release-info)))
+
+(defn- update-poster [movie new-poster]
+  (when-let [validated-poster (value/create-poster new-poster)]
+    (assoc movie :poster validated-poster)))
+
+(defn update-movie [movie {:keys [title runtime genres release-info poster]}]
+  (when-let [updated (-> movie
+                        (cond-> 
+                          title (update-title title)
+                          runtime (update-runtime runtime)
+                          genres (update-genres genres)
+                          release-info (update-release-info release-info)
+                          poster (update-poster poster))
+                        (assoc :updated-at (java.util.Date.)))]
+    (create-movie updated)))
