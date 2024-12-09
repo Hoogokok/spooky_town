@@ -58,30 +58,28 @@
                       (mapv :name (:directors movie)))
      :release-status release-status}))
 
-(defn update-title [movie new-title]
+(defn- update-title [movie new-title]
   (when-let [validated-title (value/create-title new-title)]
-    (-> movie
-        (assoc :title validated-title
-               :updated-at (java.util.Date.))
-        (create-movie))))
+    (assoc movie :title validated-title)))
 
-(defn update-runtime [movie new-runtime]
+(defn- update-runtime [movie new-runtime]
   (when-let [validated-runtime (value/create-runtime new-runtime)]
-    (-> movie
-        (assoc :runtime validated-runtime
-               :updated-at (java.util.Date.))
-        (create-movie))))
+    (assoc movie :runtime validated-runtime)))
 
-(defn update-genres [movie new-genres]
+(defn- update-genres [movie new-genres]
   (when-let [validated-genres (value/create-genres new-genres)]
-    (-> movie
-        (assoc :genres validated-genres
-               :updated-at (java.util.Date.))
-        (create-movie))))
+    (assoc movie :genres validated-genres)))
 
-(defn update-release-info [movie new-release-info]
+(defn- update-release-info [movie new-release-info]
   (when-let [validated-release-info (value/create-release-info new-release-info)]
-    (-> movie
-        (assoc :release-info validated-release-info
-               :updated-at (java.util.Date.))
-        (create-movie))))
+    (assoc movie :release-info validated-release-info)))
+
+(defn update-movie [movie {:keys [title runtime genres release-info]}]
+  (when-let [updated (-> movie
+                        (cond-> 
+                          title (update-title title)
+                          runtime (update-runtime runtime)
+                          genres (update-genres genres)
+                          release-info (update-release-info release-info))
+                        (assoc :updated-at (java.util.Date.)))]
+    (create-movie updated)))

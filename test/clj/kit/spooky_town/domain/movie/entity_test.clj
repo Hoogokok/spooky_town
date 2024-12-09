@@ -90,49 +90,75 @@
     (is (nil? (entity/->summary nil)))))
 
 (deftest update-movie-test
-  (testing "영화 제목 업데이트"
-    (let [movie (entity/create-movie valid-movie-data)
-          updated (entity/update-title movie "새로운 제목")]
-      (is (some? updated))
-      (is (= "새로운 제목" (:title updated)))
-      (is (not= (:updated-at movie) (:updated-at updated)))))
+  (let [movie (entity/create-movie valid-movie-data)]
+    
+    (testing "전체 필드 업데이트"
+      (let [updates {:title "새로운 제목"
+                    :runtime 120
+                    :genres #{:horror :gore}
+                    :release-info {:release-status :released
+                                 :release-date "2024-01-01"}}
+            updated (entity/update-movie movie updates)]
+        (is (some? updated))
+        (is (= "새로운 제목" (:title updated)))
+        (is (= 120 (:runtime updated)))
+        (is (= #{:horror :gore} (:genres updated)))
+        (is (= (:release-info updates) (:release-info updated)))
+        (is (not= (:updated-at movie) (:updated-at updated)))))
 
-  (testing "영화 상영 시간 업데이트"
-    (let [movie (entity/create-movie valid-movie-with-optional)
-          updated (entity/update-runtime movie 150)]
-      (is (some? updated))
-      (is (= 150 (:runtime updated)))
-      (is (not= (:updated-at movie) (:updated-at updated)))))
+    (testing "선택적 필드 업데이트"
+      (testing "제목만 업데이트"
+        (let [updates {:title "새로운 제목"}
+              updated (entity/update-movie movie updates)]
+          (is (some? updated))
+          (is (= "새로운 제목" (:title updated)))
+          (is (= (:runtime movie) (:runtime updated)))
+          (is (= (:genres movie) (:genres updated)))
+          (is (= (:release-info movie) (:release-info updated)))
+          (is (not= (:updated-at movie) (:updated-at updated)))))
 
-  (testing "영화 장르 업데이트"
-    (let [movie (entity/create-movie valid-movie-data)
-          new-genres #{:horror :psychological :gore}
-          updated (entity/update-genres movie new-genres)]
-      (is (some? updated))
-      (is (= new-genres (:genres updated)))
-      (is (not= (:updated-at movie) (:updated-at updated)))))
+      (testing "상영시간만 업데이트"
+        (let [updates {:runtime 120}
+              updated (entity/update-movie movie updates)]
+          (is (some? updated))
+          (is (= (:title movie) (:title updated)))
+          (is (= 120 (:runtime updated)))
+          (is (= (:genres movie) (:genres updated)))
+          (is (= (:release-info movie) (:release-info updated)))
+          (is (not= (:updated-at movie) (:updated-at updated)))))
 
-  (testing "영화 개봉 정보 업데이트"
-    (let [movie (entity/create-movie valid-movie-data)
-          new-release-info {:release-status :released
-                           :release-date "2024-01-01"}
-          updated (entity/update-release-info movie new-release-info)]
-      (is (some? updated))
-      (is (= new-release-info (:release-info updated)))
-      (is (not= (:updated-at movie) (:updated-at updated)))))
+      (testing "장르만 업데이트"
+        (let [updates {:genres #{:horror :gore}}
+              updated (entity/update-movie movie updates)]
+          (is (some? updated))
+          (is (= (:title movie) (:title updated)))
+          (is (= (:runtime movie) (:runtime updated)))
+          (is (= #{:horror :gore} (:genres updated)))
+          (is (= (:release-info movie) (:release-info updated)))
+          (is (not= (:updated-at movie) (:updated-at updated)))))
 
-  (testing "잘못된 입력값으로 업데이트 시도"
-    (let [movie (entity/create-movie valid-movie-data)]
-      (testing "빈 제목으로 업데이트"
-        (is (nil? (entity/update-title movie ""))))
+      (testing "개봉정보만 업데이트"
+        (let [updates {:release-info {:release-status :released
+                                    :release-date "2024-01-01"}}
+              updated (entity/update-movie movie updates)]
+          (is (some? updated))
+          (is (= (:title movie) (:title updated)))
+          (is (= (:runtime movie) (:runtime updated)))
+          (is (= (:genres movie) (:genres updated)))
+          (is (= (:release-info updates) (:release-info updated)))
+          (is (not= (:updated-at movie) (:updated-at updated))))))
+
+    (testing "유효하지 않은 업데이트"
+      (testing "빈 제목"
+        (is (nil? (entity/update-movie movie {:title ""}))))
       
-      (testing "잘못된 상영 시간으로 업데이트"
-        (is (nil? (entity/update-runtime movie -10))))
+      (testing "잘못된 상영시간"
+        (is (nil? (entity/update-movie movie {:runtime -10}))))
       
-      (testing "필수 장르가 없는 장르셋으로 업데이트"
-        (is (nil? (entity/update-genres movie #{:gore :psychological}))))
+      (testing "필수 장르 누락"
+        (is (nil? (entity/update-movie movie {:genres #{:gore :psychological}}))))
       
-      (testing "잘못된 형식의 개봉일로 업데이트"
-        (is (nil? (entity/update-release-info movie 
-                   {:release-status :released
-                    :release-date "2024-13-45"})))))))
+      (testing "잘못된 개봉일"
+        (is (nil? (entity/update-movie movie 
+                   {:release-info {:release-status :released
+                                 :release-date "2024-13-45"}})))))))
