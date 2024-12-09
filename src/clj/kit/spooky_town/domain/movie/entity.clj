@@ -72,9 +72,9 @@
                :updated-at (java.util.Date.))
         (create-movie))))
 
-(defn update-genres [movie new-genres]
-  (when-let [validated-genres (value/create-genres new-genres)]
+(defn update-release-info [movie new-release-info]
+  (when-let [validated-release-info (value/create-release-info new-release-info)]
     (-> movie
-        (assoc :genres validated-genres
+        (assoc :release-info validated-release-info
                :updated-at (java.util.Date.))
         (create-movie))))
