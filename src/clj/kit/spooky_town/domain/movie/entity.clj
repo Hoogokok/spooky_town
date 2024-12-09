@@ -64,3 +64,10 @@
         (assoc :title validated-title
                :updated-at (java.util.Date.))
         (create-movie))))
+
+(defn update-runtime [movie new-runtime]
+  (when-let [validated-runtime (value/create-runtime new-runtime)]
+    (-> movie
+        (assoc :runtime validated-runtime
+               :updated-at (java.util.Date.))
+        (create-movie))))
