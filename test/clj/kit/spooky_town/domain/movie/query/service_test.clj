@@ -50,17 +50,14 @@
 (use-fixtures :each with-test-movie)
 
 (deftest movie-query-service-test
-  (let [tx-manager (reify tx/TransactionManager
-                    (with-transaction [_ repositories f]
-                      (apply f repositories))
-                    (with-read-only-transaction [_ repositories f]
-                      (apply f repositories)))
-
+  (let [with-read-only (fn [repositories f]
+                         (apply f repositories))
+        
         service (sut/->MovieQueryServiceImpl
                 (->TestMovieRepository)
                 (->TestMovieActorRepository)
                 (->TestMovieDirectorRepository)
-                tx-manager)]
+                with-read-only)]
 
     (testing "영화 상세 정보 조회"
       (testing "모든 관계 정보 포함"
