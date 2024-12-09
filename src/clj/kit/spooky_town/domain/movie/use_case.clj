@@ -100,7 +100,11 @@
           ;; 검증 실패 시
           (f/fail "필수 필드가 유효하지 않습니다.")))))
 
-  (update-movie [_ {:keys [movie-id] :as command}]
+  (update-movie [_ {:keys [movie-id
+                           title
+                           runtime
+                           genres
+                           release-info ] :as command}]
     (with-tx movie-repository
       (fn [repo]
         (if-let [movie (movie-repository/find-by-id repo movie-id)]
