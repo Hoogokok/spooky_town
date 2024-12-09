@@ -82,3 +82,105 @@
       (testing "장르 누락"
         (let [command (dissoc base-command :genres)]
           (is (f/failed? (use-case/create-movie movie-use-case command))))))))
+
+(deftest update-movie-test
+  (let [with-tx (fn [repo f] (f repo))
+        movie-repository (->TestMovieRepository)
+        director-repository (->TestDirectorRepository)
+        movie-director-repository (->TestMovieDirectorRepository)
+        actor-repository (->TestActorRepository)
+        movie-actor-repository (->TestMovieActorRepository)
+        image-gateway (->TestImageUploadGateway)
+        id-generator (->TestIdGenerator)
+        uuid-generator (->TestUuidGenerator)
+        movie-use-case (->CreateMovieUseCaseImpl with-tx
+                                                 movie-repository
+                                                 movie-director-repository
+                                                 movie-actor-repository
+                                                 director-repository
+                                                 actor-repository
+                                                 image-gateway
+                                                 id-generator
+                                                 uuid-generator)
+        existing-movie {:movie-id "test-movie-id"
+                        :uuid #uuid "00000000-0000-0000-0000-000000000000"
+                        :title "원제목"
+                        :release-info {:release-status :upcoming
+                                       :release-date "2024-12-25"}
+                        :genres #{:horror :psychological}
+                        :created-at (java.util.Date.)
+                        :updated-at (java.util.Date.)}]
+
+    (testing "영화 업데이트 성공"
+      (with-redefs [movie-repository-fixture/find-by-id (constantly existing-movie)
+                    movie-repository-fixture/save! (fn [_ movie] movie)]
+        
+        (testing "모든 필드 업데이트"
+          (let [command {:movie-id "test-movie-id"
+                        :title "새로운 제목"
+                        :runtime 120
+                        :genres #{:horror :gore}
+                        :release-info {:release-status :released
+                                     :release-date "2024-01-01"}}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))
+
+        (testing "제목만 업데이트"
+          (let [command {:movie-id "test-movie-id"
+                        :title "새로운 제목"}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))
+
+        (testing "상영시간만 업데이트"
+          (let [command {:movie-id "test-movie-id"
+                        :runtime 120}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))
+
+        (testing "장르만 업데이트"
+          (let [command {:movie-id "test-movie-id"
+                        :genres #{:horror :gore}}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))
+
+        (testing "개봉정보만 업데이트"
+          (let [command {:movie-id "test-movie-id"
+                        :release-info {:release-status :released
+                                     :release-date "2024-01-01"}}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))))
+
+    (testing "영화 업데이트 실패"
+      (testing "존재하지 않는 영화"
+        (with-redefs [movie-repository-fixture/find-by-id (constantly nil)]
+          (let [command {:movie-id "non-existing-id"
+                        :title "새로운 제목"}]
+            (is (f/failed? (use-case/update-movie movie-use-case command))))))
+
+      (testing "유효하지 않은 데이터"
+        (with-redefs [movie-repository-fixture/find-by-id (constantly existing-movie)]
+          (testing "빈 제목"
+            (let [command {:movie-id "test-movie-id"
+                          :title ""}]
+              (is (f/failed? (use-case/update-movie movie-use-case command)))))
+
+          (testing "잘못된 상영시간"
+            (let [command {:movie-id "test-movie-id"
+                          :runtime -10}]
+              (is (f/failed? (use-case/update-movie movie-use-case command)))))
+
+          (testing "필수 장르 누락"
+            (let [command {:movie-id "test-movie-id"
+                          :genres #{:gore :psychological}}]
+              (is (f/failed? (use-case/update-movie movie-use-case command)))))
+
+          (testing "잘못된 개봉일"
+            (let [command {:movie-id "test-movie-id"
+                          :release-info {:release-status :released
+                                       :release-date "2024-13-45"}}]
+              (is (f/failed? (use-case/update-movie movie-use-case command))))))))))
