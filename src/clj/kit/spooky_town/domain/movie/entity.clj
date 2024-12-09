@@ -57,3 +57,10 @@
      :director-names (when (:directors movie)
                       (mapv :name (:directors movie)))
      :release-status release-status}))
+
+(defn update-title [movie new-title]
+  (when-let [validated-title (value/create-title new-title)]
+    (-> movie
+        (assoc :title validated-title
+               :updated-at (java.util.Date.))
+        (create-movie))))
