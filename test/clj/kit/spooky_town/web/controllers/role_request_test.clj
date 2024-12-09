@@ -14,7 +14,7 @@
                            {:uuid request-uuid}))
           request {:role-request-use-case mock-use-case
                   :identity {:user-uuid user-uuid}
-                  :body-params {:role "moderator"
+                  :body-params {:role "content-creator"
                               :reason "테스트 요청입니다."}}
           response (controller/create-request request)]
       (is (= 201 (:status response)))
@@ -34,7 +34,7 @@
           user-uuid #uuid "660e8400-e29b-41d4-a716-446655440000"
           mock-requests [{:uuid request-uuid
                          :user_uuid user-uuid
-                         :requested_role "moderator"
+                         :requested_role "content-creator"
                          :reason "테스트 요청입니다."
                          :status "pending"
                          :created_at "2024-03-21T00:00:00Z"}]
