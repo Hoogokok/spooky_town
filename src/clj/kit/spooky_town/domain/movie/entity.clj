@@ -71,3 +71,10 @@
         (assoc :runtime validated-runtime
                :updated-at (java.util.Date.))
         (create-movie))))
+
+(defn update-genres [movie new-genres]
+  (when-let [validated-genres (value/create-genres new-genres)]
+    (-> movie
+        (assoc :genres validated-genres
+               :updated-at (java.util.Date.))
+        (create-movie))))
