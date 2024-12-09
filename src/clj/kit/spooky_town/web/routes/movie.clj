@@ -1,6 +1,7 @@
 (ns kit.spooky-town.web.routes.movie
-  (:require [kit.spooky-town.web.controllers.movie :as movie] 
-            [kit.spooky-town.web.routes.common :refer [authenticated-route-data]]))
+  (:require [kit.spooky-town.web.controllers.movie :as movie]
+            [kit.spooky-town.web.routes.common :refer [authenticated-route-data]]
+            [kit.spooky-town.web.middleware.multipart :refer [wrap-multipart-params]]))
 
 (def movie-routes-data
   ["/movies"
@@ -35,14 +36,30 @@
                   :handler movie/search-movies}})]
    
    ["/:movie-id"
-    {:get {:summary "Get movie details"
-           :parameters {:path [:map [:movie-id string?]]
-                       :query [:map
-                              [:include-actors {:optional true} boolean?]
-                              [:include-directors {:optional true} boolean?]]}
-           :responses {200 {:body map?}
-                      404 {:body empty?}}
-           :handler movie/find-movie}}]
+    (merge authenticated-route-data
+           {:get {:summary "Get movie details"
+                  :parameters {:path [:map [:movie-id string?]]
+                             :query [:map
+                                    [:include-actors {:optional true} boolean?]
+                                    [:include-directors {:optional true} boolean?]]}
+                  :responses {200 {:body map?}
+                             404 {:body empty?}}
+                  :handler movie/find-movie}
+            
+            :put {:summary "Update movie"
+                  :middleware [wrap-multipart-params]
+                  :parameters {:path [:map [:movie-id string?]]
+                             :multipart [:map
+                                       [:poster {:optional true} any?]]
+                             :form [:map
+                                   [:title {:optional true} string?]
+                                   [:runtime {:optional true} pos-int?]
+                                   [:genres {:optional true} set?]
+                                   [:release-info {:optional true} map?]]}
+                  :responses {200 {:body [:map [:movie-id string?]]}
+                             400 {:body [:map [:error string?]]}
+                             404 {:body empty?}}
+                  :handler movie/update-movie}})]
    
    ["/:movie-id/summary"
     {:get {:summary "Get movie summary"
