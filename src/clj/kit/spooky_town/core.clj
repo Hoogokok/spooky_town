@@ -21,6 +21,7 @@
    [kit.spooky-town.infrastructure.auth.bcrypt-gateway]
    [kit.spooky-town.infrastructure.auth.email-verification-gateway]
    [kit.spooky-town.infrastructure.id.ulid]
+   [kit.spooky-town.infrastructure.id.uuid-generator]
    [kit.spooky-town.infrastructure.image.cloudinary]
    ;; Database
    [kit.spooky-town.infrastructure.persistence.core]
@@ -32,6 +33,8 @@
    [kit.spooky-town.infrastructure.persistence.director]
    [kit.spooky-town.infrastructure.persistence.movie-director]
    [kit.spooky-town.infrastructure.persistence.movie-actor]
+   [kit.spooky-town.infrastructure.persistence.role]
+   [kit.spooky-town.infrastructure.persistence.user-role]
    ;; Use-cases
    [kit.spooky-town.domain.role-request.use-case]
    [kit.spooky-town.domain.user.use-case]
