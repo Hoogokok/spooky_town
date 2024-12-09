@@ -1,19 +1,18 @@
 (ns kit.spooky-town.web.controllers.health
   (:require
-   [kit.spooky-town.web.responses :as responses]
-   [kit.spooky-town.infrastructure.persistence.transaction :as tx])
+   [kit.spooky-town.web.responses :as responses])
   (:import
    [java.util Date]))
 
 (defn healthcheck!
-  [{:keys [tx-manager] :as req}]
+  [{:keys [datasource] :as req}]
   (try
     (let [db-status (try
-                      (tx/with-read-only
-                        tx-manager
-                        (fn [_] (= 1 1)))
-                      true
-                      (catch Exception _ false))]
+                     (with-open [conn (.getConnection datasource)]
+                       (with-open [stmt (.createStatement conn)]
+                         (.execute stmt "SELECT 1")))
+                     true
+                     (catch Exception _ false))]
       (responses/ok
        {:time     (str (Date. (System/currentTimeMillis)))
         :up-since (str (Date. (.getStartTime (java.lang.management.ManagementFactory/getRuntimeMXBean))))

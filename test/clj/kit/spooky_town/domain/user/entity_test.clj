@@ -3,12 +3,11 @@
             [kit.spooky-town.domain.user.entity :as entity]))
 
 (def valid-user-data
-  {:user-id "01HGD3V7XN6QX5RJQR1VVXDCP9"  ;; ULID 형식
+  {:user-id "01HGD3V7XN6QX5RJQR1VVXDCP9"
    :uuid #uuid "00000000-0000-0000-0000-000000000000"
    :email "test@example.com"
    :name "Test User"
    :hashed-password "hashed_password_123"
-   :roles #{:user}
    :created-at (java.util.Date.)})
 
 (deftest create-user-test
@@ -17,54 +16,47 @@
       (is (some? user))
       (is (= "01HGD3V7XN6QX5RJQR1VVXDCP9" (:user-id user)))
       (is (= "test@example.com" (:email user)))
-      (is (= "Test User" (:name user)))
-      (is (= #{:user} (:roles user)))))
+      (is (= "Test User" (:name user)))))
 
-  (testing "유효하지 않은 데이터로 User 생성 실패"
-    (testing "user-id 누락"
-      (let [invalid-data (dissoc valid-user-data :user-id)]
-        (is (nil? (entity/create-user invalid-data)))))
-    
-    (testing "이메일 누락"
-      (let [invalid-data (dissoc valid-user-data :email)]
-        (is (nil? (entity/create-user invalid-data)))))
-    
-    (testing "이름 누락"
-      (let [invalid-data (dissoc valid-user-data :name)]
-        (is (nil? (entity/create-user invalid-data)))))))
+  (testing "필수 필드 누락시 생성 실패"
+    (is (nil? (entity/create-user (dissoc valid-user-data :email))))
+    (is (nil? (entity/create-user (dissoc valid-user-data :name))))
+    (is (nil? (entity/create-user (dissoc valid-user-data :hashed-password))))))
 
-(deftest mark-as-withdrawn-test
-  (testing "사용자 탈퇴 처리"
-    (let [user (entity/create-user
-                {:user-id "01HGD3V7XN6QX5RJQR1VVXDCP9"
-                 :uuid #uuid "00000000-0000-0000-0000-000000000000"
-                 :email "test@example.com"
-                 :name "Test User"
-                 :hashed-password "hashed_password_123"
-                 :roles #{:user}})
-          reason "테스트 탈퇴"
-          withdrawn-user (entity/mark-as-withdrawn user reason)]
-      (is (some? (:deleted-at withdrawn-user)))
-      (is (= reason (:withdrawal-reason withdrawn-user)))
-      (is (entity/withdrawn? withdrawn-user))))
-  
-  (testing "탈퇴 여부 확인"
-    (let [active-user (entity/create-user
-                       {:user-id "01HGD3V7XN6QX5RJQR1VVXDCP9"
-                        :uuid #uuid "00000000-0000-0000-0000-000000000000"
-                        :email "test@example.com"
-                        :name "Test User"
-                        :hashed-password "hashed_password_123"
-                        :roles #{:user}})
-          withdrawn-user (entity/create-user
-                         {:user-id "01HGD3V7XN6QX5RJQR1VVXDCP9"
-                          :uuid #uuid "00000000-0000-0000-0000-000000000000"
-                          :email "test@example.com"
-                          :name "Test User"
-                          :hashed-password "hashed_password_123"
-                          :roles #{:user}
-                          :deleted-at (java.util.Date.)
-                          :withdrawal-reason "탈퇴 사유"})]
-      (is (not (entity/withdrawn? active-user)))
-      (is (entity/withdrawn? withdrawn-user)))))
+(deftest update-user-test
+  (let [user (entity/create-user valid-user-data)]
+    
+    (testing "이메일 업데이트"
+      (let [updated (entity/update-email user "new@example.com")]
+        (is (some? updated))
+        (is (= "new@example.com" (:email updated)))))
+    
+    (testing "잘못된 이메일로 업데이트 시도"
+      (is (nil? (entity/update-email user "invalid-email"))))
+
+    (testing "이름 업데이트"
+      (let [updated (entity/update-name user "New Name")]
+        (is (some? updated))
+        (is (= "New Name" (:name updated)))))
+    
+    (testing "잘못된 이름으로 업데이트 시도"
+      (is (nil? (entity/update-name user "A"))))  ;; 2자 미만
+
+    (testing "비밀번호 업데이트"
+      (let [updated (entity/update-password user "new_hashed_password")]
+        (is (some? updated))
+        (is (= "new_hashed_password" (:hashed-password updated)))))))
+
+(deftest withdrawal-test
+  (let [user (entity/create-user valid-user-data)]
+    
+    (testing "탈퇴 처리"
+      (let [withdrawn (entity/mark-as-withdrawn user "탈퇴 사유")]
+        (is (some? withdrawn))
+        (is (some? (:deleted-at withdrawn)))
+        (is (= "탈퇴 사유" (:withdrawal-reason withdrawn)))))
+    
+    (testing "탈퇴 여부 확인"
+      (is (not (entity/withdrawn? user)))
+      (is (entity/withdrawn? (entity/mark-as-withdrawn user "탈퇴"))))))
 

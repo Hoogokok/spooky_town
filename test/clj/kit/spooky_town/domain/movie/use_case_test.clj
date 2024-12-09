@@ -5,10 +5,11 @@
             [kit.spooky-town.domain.movie.test.repository :as movie-repository-fixture :refer [->TestMovieRepository]]
             [kit.spooky-town.domain.director.test.repository :as director-repository-fixture :refer [->TestDirectorRepository]]
             [kit.spooky-town.domain.actor.test.repository :as actor-repository-fixture :refer [->TestActorRepository]]
+            [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]
+            [kit.spooky-town.domain.common.id.test.uuid-generator :as uuid-generator-fixture :refer [->TestUuidGenerator]]
             [kit.spooky-town.domain.movie-director.test.repository :as movie-director-repository-fixture :refer [->TestMovieDirectorRepository]]
             [kit.spooky-town.domain.movie-actor.test.repository :as movie-actor-repository-fixture :refer [->TestMovieActorRepository]]
-            [kit.spooky-town.domain.common.image.test.gateway :as image-gateway-fixture :refer [->TestImageUploadGateway]]
-            [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]))
+            [kit.spooky-town.domain.common.image.test.gateway :as image-gateway-fixture :refer [->TestImageUploadGateway]]))
 
 (def base-command
   {:title "스푸키 타운의 비밀"
@@ -26,6 +27,7 @@
         movie-actor-repository (->TestMovieActorRepository)
         image-gateway (->TestImageUploadGateway)
         id-generator (->TestIdGenerator)
+        uuid-generator (->TestUuidGenerator)
         movie-use-case (->CreateMovieUseCaseImpl with-tx
                                                  movie-repository
                                                  movie-director-repository
@@ -33,7 +35,8 @@
                                                  director-repository
                                                  actor-repository
                                                  image-gateway
-                                                 id-generator)]
+                                                 id-generator
+                                                 uuid-generator)]
 
     (testing "영화 생성 성공 - 필수 필드만"
       (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")

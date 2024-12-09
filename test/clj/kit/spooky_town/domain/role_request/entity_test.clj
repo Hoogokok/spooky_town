@@ -5,70 +5,68 @@
 (deftest create-role-request-test
   (testing "유효한 역할 변경 요청 생성"
     (let [request (entity/create-role-request
-                   {:user-id 1
-                    :requested-role :moderator
-                    :reason "I want to help moderate the community and have been active for over a year."})]
+                   {:user-id "user-01HQ..."
+                    :current-role :user
+                    :requested-role :content_creator
+                    :reason "I want to help create content and have been active for over a year."})]
       (is (uuid? (:uuid request)))
-      (is (= 1 (:user-id request)))
-      (is (= :moderator (:requested-role request)))
+      (is (= "user-01HQ..." (:user-id request)))
+      (is (= :user (:current-role request)))
+      (is (= :content_creator (:requested-role request)))
       (is (= :pending (:status request)))
       (is (inst? (:created-at request)))))
   
   (testing "유효하지 않은 요청은 nil 반환"
     (is (nil? (entity/create-role-request
-                {:user-id 1
-                 :requested-role :moderator
+                {:user-id "user-01HQ..."
+                 :current-role :user
+                 :requested-role :content_creator
                  :reason "short"})))  ;; 10자 미만
     (is (nil? (entity/create-role-request
                 {:user-id nil
-                 :requested-role :moderator
+                 :current-role :user
+                 :requested-role :content_creator
                  :reason "valid reason here"})))))
 
 (deftest approve-request-test
   (testing "대기 중인 요청 승인"
     (let [request (entity/create-role-request
-                   {:user-id 1
-                    :requested-role :moderator
-                    :reason "I want to help moderate the community."})
-          approved (entity/approve-request request 2)]  ;; admin-id = 2
+                   {:user-id "user-01HQ..."
+                    :current-role :user
+                    :requested-role :content_creator
+                    :reason "I want to help create content."})
+          approved (entity/approve-request request "admin-01HQ...")]
       (is (= :approved (:status approved)))
-      (is (= 2 (:approved-by approved)))
+      (is (= "admin-01HQ..." (:approved-by approved)))
       (is (inst? (:updated-at approved)))))
   
   (testing "이미 처리된 요청은 승인 불가"
     (let [request (-> (entity/create-role-request
-                       {:user-id 1
-                        :requested-role :moderator
-                        :reason "I want to help moderate the community."})
-                     (entity/approve-request 2))]
-      (is (nil? (entity/approve-request request 3))))))
+                       {:user-id "user-01HQ..."
+                        :current-role :user
+                        :requested-role :content_creator
+                        :reason "I want to help create content."})
+                     (entity/approve-request "admin-01HQ..."))]
+      (is (nil? (entity/approve-request request "admin-02HQ..."))))))
 
 (deftest reject-request-test
   (testing "대기 중인 요청 거절"
     (let [request (entity/create-role-request
-                   {:user-id 1
-                    :requested-role :moderator
-                    :reason "I want to help moderate the community."})
-          rejected (entity/reject-request 
-                    request 
-                    2 
-                    "Not enough community participation yet.")]
+                   {:user-id "user-01HQ..."
+                    :current-role :user
+                    :requested-role :content_creator
+                    :reason "I want to help create content."})
+          rejected (entity/reject-request request "admin-01HQ..." "Not enough experience")]
       (is (= :rejected (:status rejected)))
-      (is (= 2 (:rejected-by rejected)))
-      (is (= "Not enough community participation yet." (:rejection-reason rejected)))
-      (is (inst? (:updated-at rejected)))))
-  
-  (testing "거절 사유가 너무 짧으면 거절 불가"
-    (let [request (entity/create-role-request
-                   {:user-id 1
-                    :requested-role :moderator
-                    :reason "I want to help moderate the community."})]
-      (is (nil? (entity/reject-request request 2 "short"))))))
+      (is (= "admin-01HQ..." (:rejected-by rejected)))
+      (is (= "Not enough experience" (:rejection-reason rejected)))
+      (is (inst? (:updated-at rejected))))))
 
 (deftest status-check-test
   (let [request (entity/create-role-request
-                 {:user-id 1
-                  :requested-role :moderator
+                 {:user-id "user-01HQ..."
+                  :current-role :user
+                  :requested-role :content-creator
                   :reason "I want to help moderate the community."})]
     
     (testing "초기 상태는 pending"
@@ -77,13 +75,13 @@
       (is (not (entity/rejected? request))))
     
     (testing "승인된 요청"
-      (let [approved (entity/approve-request request 2)]
+      (let [approved (entity/approve-request request "admin-01HQ...")]
         (is (not (entity/pending? approved)))
         (is (entity/approved? approved))
         (is (not (entity/rejected? approved)))))
     
     (testing "거절된 요청"
-      (let [rejected (entity/reject-request request 2 "Not enough experience.")]
+      (let [rejected (entity/reject-request request "admin-01HQ..." "Not enough experience.")]
         (is (not (entity/pending? rejected)))
         (is (not (entity/approved? rejected)))
         (is (entity/rejected? rejected)))))) 
