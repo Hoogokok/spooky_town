@@ -12,44 +12,52 @@
   protocol/TheaterRepository
   (save! [this theater]
     (.with-tx tx-manager [this]
-      (fn [repo]
-        (let [query-fn (:query-fn repo)]
-          (query-fn (:save-theater! queries)
-                   theater
-                   {:builder-fn rs/as-unqualified-maps})))))
+              (fn [repo]
+                (let [query-fn (:query-fn repo)]
+                  (query-fn (:save-theater! queries)
+                            theater
+                            {:builder-fn rs/as-unqualified-maps})))))
 
   (find-by-id [this theater-id]
     (.with-read-only tx-manager [this]
-      (fn [repo]
-        (let [query-fn (:query-fn repo)]
-          (query-fn (:get-theater-by-id queries)
-                   {:theater_id theater-id}
-                   {:builder-fn rs/as-unqualified-maps})))))
+                     (fn [repo]
+                       (let [query-fn (:query-fn repo)]
+                         (query-fn (:get-theater-by-id queries)
+                                   {:theater_id theater-id}
+                                   {:builder-fn rs/as-unqualified-maps})))))
 
   (find-by-uuid [this uuid]
     (.with-read-only tx-manager [this]
-      (fn [repo]
-        (let [query-fn (:query-fn repo)]
-          (query-fn (:get-theater-by-uuid queries)
-                   {:uuid uuid}
-                   {:builder-fn rs/as-unqualified-maps})))))
+                     (fn [repo]
+                       (let [query-fn (:query-fn repo)]
+                         (query-fn (:get-theater-by-uuid queries)
+                                   {:uuid uuid}
+                                   {:builder-fn rs/as-unqualified-maps})))))
 
   (find-id-by-uuid [this uuid]
     (.with-read-only tx-manager [this]
-      (fn [repo]
-        (let [query-fn (:query-fn repo)
-              result (query-fn (:get-theater-by-uuid queries)
-                              {:uuid uuid}
-                              {:builder-fn rs/as-unqualified-maps})]
-          (:theater_id result)))))
+                     (fn [repo]
+                       (let [query-fn (:query-fn repo)
+                             result (query-fn (:get-theater-by-uuid queries)
+                                              {:uuid uuid}
+                                              {:builder-fn rs/as-unqualified-maps})]
+                         (:theater_id result)))))
 
   (find-by-chain-type [this chain-type]
     (.with-read-only tx-manager [this]
-      (fn [repo]
-        (let [query-fn (:query-fn repo)]
-          (query-fn (:find-theaters-by-chain-type queries)
-                   {:chain_type (name chain-type)}
-                   {:builder-fn rs/as-unqualified-maps}))))))
+                     (fn [repo]
+                       (let [query-fn (:query-fn repo)]
+                         (query-fn (:find-theaters-by-chain-type queries)
+                                   {:chain_type (name chain-type)}
+                                   {:builder-fn rs/as-unqualified-maps})))))
+
+  (find-by-name [this theater-name]
+    (.with-read-only tx-manager [this]
+                     (fn [repo]
+                       (let [query-fn (:query-fn repo)]
+                         (query-fn (:get-theater-by-name queries)
+                                   {:theater_name theater-name}
+                                   {:builder-fn rs/as-unqualified-maps}))))))
 
 (defmethod ig/init-key :infrastructure/theater-repository
   [_ {:keys [datasource tx-manager queries]}]

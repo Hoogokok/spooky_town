@@ -299,3 +299,9 @@ WHERE mt.theater_id = :theater_id
 -- :doc 영화-극장 관계를 삭제합니다
 DELETE FROM movie_theaters
 WHERE movie_id = :movie_id AND theater_id = :theater_id;
+
+-- :name get-theater-by-name :? :1
+-- :doc 이름으로 극장을 조회합니다
+SELECT theater_id, uuid, chain_type, created_at, updated_at
+FROM theaters
+WHERE theater_name = :theater_name;
