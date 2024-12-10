@@ -10,6 +10,9 @@
   (find-by-uuid [this uuid]
     "UUID로 영화를 조회합니다.")
 
+  (find-id-by-uuid [this uuid]
+    "UUID로 영화 ID를 조회합니다.")
+
   ;; 새로 추가되는 메서드들
   (find-by-criteria [this criteria]
     "주어진 조건으로 영화 목록을 검색합니다.

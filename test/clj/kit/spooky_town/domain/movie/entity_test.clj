@@ -59,29 +59,27 @@
 
 (deftest movie-summary-test
   (testing "영화 엔티티를 요약 정보로 변환"
-    (let [movie {:movie-id "MOVIE123"
-                 :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+    (let [movie {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"
                  :title "스크림"
                  :poster {:url "http://example.com/poster.jpg"}
-                 :release-date "2024-01-01"
+                 :release-info {:status :released
+                                :release-date "2024-01-01"}
                  :genres #{:horror :thriller}
                  :directors [{:name "웨스 크레이븐"}]
-                 :release-status :released
                  :created-at (java.util.Date.)
                  :updated-at (java.util.Date.)}
           summary (entity/->summary movie)]
       
       (testing "필수 필드 포함 여부"
-        (is (= "MOVIE123" (:movie-id summary)))
+        (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid summary)))
         (is (= "스크림" (:title summary)))
-        (is (= "http://example.com/poster.jpg" (:poster-url summary)))
-        (is (= "2024-01-01" (:release-date summary)))
+        (is (= "http://example.com/poster.jpg" (:poster-url summary))) 
         (is (= #{:horror :thriller} (:genres summary)))
         (is (= ["웨스 크레이븐"] (:director-names summary)))
-        (is (= :released (:release-status summary))))
+        (is (= {:status :released :release-date "2024-01-01"} (:release-info summary))))
       
       (testing "불필요한 필드 제외 여부"
-        (is (nil? (:uuid summary)))
+        (is (nil? (:movie-id summary)))
         (is (nil? (:created-at summary)))
         (is (nil? (:updated-at summary))))))
 

@@ -210,6 +210,7 @@
  {:movie-repository #ig/ref :infrastructure/movie-repository
   :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
   :movie-director-repository #ig/ref :infrastructure/movie-director-repository
+  :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
   :tx-manager #ig/ref :db/tx-manager}
 
 

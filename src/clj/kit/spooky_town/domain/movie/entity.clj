@@ -45,18 +45,17 @@
       movie)))
 
 ;; 조회용 요약 정보 변환
-(defn ->summary [{:keys [movie-id title poster release-date genres
-                         release-status] :as movie}]
-  (when (and movie-id title poster release-date
-             genres release-status)
-    {:movie-id movie-id
+(defn ->summary [{:keys [movie-uuid title poster  genres
+                         release-info] :as movie}]
+  (when (and movie-uuid title release-info
+             genres)
+    {:movie-uuid movie-uuid
      :title title
-     :poster-url (:url poster)
-     :release-date release-date
+     :poster-url (:url poster) 
      :genres genres
      :director-names (when (:directors movie)
-                      (mapv :name (:directors movie)))
-     :release-status release-status}))
+                       (mapv :name (:directors movie))) 
+     :release-info release-info}))
 
 (defn- update-title [movie new-title]
   (when-let [validated-title (value/create-title new-title)]
