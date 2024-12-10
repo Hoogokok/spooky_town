@@ -51,7 +51,7 @@
                                    {:chain_type (name chain-type)}
                                    {:builder-fn rs/as-unqualified-maps})))))
 
-  (find-by-name [this theater-name]
+  (find-id-by-name [this theater-name]
     (.with-read-only tx-manager [this]
                      (fn [repo]
                        (let [query-fn (:query-fn repo)]
