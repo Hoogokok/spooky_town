@@ -300,4 +300,31 @@
                           :director-infos [{:director-name "봉준호" :role "공동 감독"}]}
                   result (use-case/update-movie movie-use-case command)]
               (is (f/ok? result))
+              (is (= "test-movie-id" result))))))) 
+
+    (testing "영화 업데이트 성공 - 극장 정보 포함"
+      (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id") 
+                    movie-repository-fixture/find-by-uuid (constantly existing-movie)
+                    movie-repository-fixture/save! (fn [_ movie] movie)
+                    theater-repository-fixture/find-id-by-name (constantly nil)
+                    theater-repository-fixture/save! (fn [_ theater] theater)
+                    movie-theater-repository-fixture/delete-movie-theater! (fn [_ _ _] nil)
+                    movie-theater-repository-fixture/save-movie-theater!
+                    (fn [_ _ _] nil)]
+        
+        (testing "새로운 극장 추가"
+          (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
+                        :theater-infos [{:theater-name "CGV 강남"}
+                                      {:theater-name "메가박스 코엑스"}]}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))
+        
+        (testing "기존 극장 수정"
+          (with-redefs [theater-repository-fixture/find-id-by-name 
+                       (constantly "existing-theater-id")]
+            (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
+                          :theater-infos [{:theater-name "CGV 강남"}]}
+                  result (use-case/update-movie movie-use-case command)]
+              (is (f/ok? result))
               (is (= "test-movie-id" result)))))))))

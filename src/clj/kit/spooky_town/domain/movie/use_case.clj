@@ -31,7 +31,8 @@
                                  genres
                                  release-info
                                  poster-file
-                                 director-infos])
+                                 director-infos
+  theater-infos])
 
   (defn- process-poster [image-gateway poster-file]
     (when poster-file
@@ -39,6 +40,49 @@
         (when-let [uploaded (image-gateway/upload image-gateway validated-file)]
           (value/create-poster uploaded))
         (f/fail "유효하지 않은 포스터 파일입니다."))))
+
+  (defn- process-theater [theater-repository id-generator {:keys [theater-name]}]
+  (let [theater-id (or
+                    (theater-repository/find-id-by-name theater-repository theater-name)
+                    (:theater-id
+                     (theater-repository/save! theater-repository
+                                               {:theater-id (id-generator/generate-ulid id-generator)
+                                                :theater-name theater-name})))]
+    {:theater-id theater-id}))
+
+(defn- process-director [director-repository id-generator {:keys [director-name role]}]
+  (let [director-id (or
+                     (:director-id (director-repository/find-by-name director-repository director-name))
+                     (:director-id
+                      (director-repository/save! director-repository
+                                                 {:director-id (id-generator/generate-ulid id-generator)
+                                                  :director-name director-name})))]
+    {:director-id director-id :role role}))
+
+(defn- prepare-base-update-data [{:keys [title runtime genres release-info] :as command} poster-result]
+  (if (f/failed? poster-result)
+    poster-result
+    (cond-> (if poster-result
+              (-> command
+                  (assoc :poster poster-result)
+                  (dissoc :poster-file))
+              (dissoc command :poster-file))
+      title (assoc :title title)
+      runtime (assoc :runtime runtime)
+      genres (assoc :genres genres)
+      release-info (assoc :release-info release-info))))
+
+(defn- update-director-info [movie-director-repository director-repository id-generator movie-id director-infos]
+  (when director-infos
+    (movie-director-repository/delete-by-movie-id! movie-director-repository movie-id)
+    (doseq [{:keys [director-id role]} (map #(process-director director-repository id-generator %) director-infos)]
+      (movie-director-repository/save-movie-director! movie-director-repository movie-id director-id role))))
+
+(defn- update-theater-info [movie-theater-repository theater-repository id-generator movie-id theater-infos]
+  (when theater-infos
+    (doseq [{:keys [theater-id]} (map #(process-theater theater-repository id-generator %) theater-infos)]
+      (movie-theater-repository/delete-movie-theater! movie-theater-repository movie-id theater-id)
+      (movie-theater-repository/save-movie-theater! movie-theater-repository movie-id theater-id))))
 
   (defrecord CreateMovieUseCaseImpl [with-tx
                                      movie-repository
@@ -128,41 +172,20 @@
           ;; 검증 실패 시
             (f/fail "필수 필드가 유효하지 않습니다.")))))
 
-    (update-movie [_ {:keys [movie-uuid title runtime genres release-info poster-file director-infos] :as command}]
+    (update-movie [_ {:keys [movie-uuid] :as command}]
       (with-tx movie-repository
         (fn [repo]
           (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
             (let [movie-id (:movie-id movie)
-                  poster-result (process-poster image-gateway poster-file)
-                  base-update-data (cond
-                                    (f/failed? poster-result) poster-result
-                                    poster-result (-> command
-                                                    (assoc :poster poster-result)
-                                                    (dissoc :poster-file))
-                                    :else (dissoc command :poster-file))
-                  update-data (cond-> base-update-data
-                               title (assoc :title title)
-                               runtime (assoc :runtime runtime)
-                               genres (assoc :genres genres)
-                               release-info (assoc :release-info release-info))]
+                  poster-result (process-poster image-gateway (:poster-file command))
+                  update-data (prepare-base-update-data command poster-result)]
               (if (f/failed? update-data)
                 update-data
                 (if-let [updated-movie (entity/update-movie movie update-data)]
                   (do
                     (movie-repository/save! repo updated-movie)
-                    
-                    ;; 감독 정보 업데이트
-                    (when director-infos
-                      (movie-director-repository/delete-by-movie-id! movie-director-repository movie-id)
-                      (doseq [{:keys [director-name role]} director-infos]
-                        (let [director-id (or
-                                         (:director-id (director-repository/find-by-name director-repository director-name))
-                                         (:director-id
-                                          (director-repository/save! director-repository
-                                                                 {:director-id (id-generator/generate-ulid id-generator)
-                                                                  :director-name director-name})))]
-                          (movie-director-repository/save-movie-director! movie-director-repository movie-id director-id role))))
-                    
+                    (update-director-info movie-director-repository director-repository id-generator movie-id (:director-infos command))
+                    (update-theater-info movie-theater-repository theater-repository id-generator movie-id (:theater-infos command))
                     movie-id)
                   (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
             (f/fail "영화를 찾을 수 없습니다."))))))
