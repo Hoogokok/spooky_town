@@ -16,6 +16,9 @@
 (defn find-by-chain-type [_ _]
   (throw (ex-info "Not implemented" {})))
 
+(defn find-id-by-name [_ _]
+  (throw (ex-info "Not implemented" {})))
+
 (defn delete! [_ _]
   (throw (ex-info "Not implemented" {})))
 
@@ -26,4 +29,5 @@
   (find-by-uuid [this uuid] (find-by-uuid this uuid))
   (find-id-by-uuid [this uuid] (find-id-by-uuid this uuid))
   (find-by-chain-type [this chain-type] (find-by-chain-type this chain-type))
+  (find-id-by-name [this name] (find-id-by-name this name))
   (delete! [this theater] (delete! this theater))) 

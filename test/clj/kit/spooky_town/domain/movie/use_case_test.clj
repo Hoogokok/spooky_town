@@ -8,6 +8,8 @@
             [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]
             [kit.spooky-town.domain.common.id.test.uuid-generator :as uuid-generator-fixture :refer [->TestUuidGenerator]]
             [kit.spooky-town.domain.movie-director.test.repository :as movie-director-repository-fixture :refer [->TestMovieDirectorRepository]]
+            [kit.spooky-town.domain.theater.test.repository :as theater-repository-fixture :refer [->TestTheaterRepository]]
+            [kit.spooky-town.domain.movie-theater.test.repository :as movie-theater-repository-fixture :refer [->TestMovieTheaterRepository]]
             [kit.spooky-town.domain.movie-actor.test.repository :as movie-actor-repository-fixture :refer [->TestMovieActorRepository]]
             [kit.spooky-town.domain.common.image.test.gateway :as image-gateway-fixture :refer [->TestImageUploadGateway]]))
 
@@ -25,6 +27,8 @@
         movie-director-repository (->TestMovieDirectorRepository)
         actor-repository (->TestActorRepository)
         movie-actor-repository (->TestMovieActorRepository)
+        theater-repository (->TestTheaterRepository)
+        movie-theater-repository (->TestMovieTheaterRepository)
         image-gateway (->TestImageUploadGateway)
         id-generator (->TestIdGenerator)
         uuid-generator (->TestUuidGenerator)
@@ -32,8 +36,10 @@
                                                  movie-repository
                                                  movie-director-repository
                                                  movie-actor-repository
+                                                 movie-theater-repository 
                                                  director-repository
                                                  actor-repository
+                                                 theater-repository
                                                  image-gateway
                                                  id-generator
                                                  uuid-generator)]
@@ -50,7 +56,7 @@
           (is (f/ok? result))
           (is (= "test-id" result)))))
     
-    (testing "영화 생성 성공 - 선택적 필드 포함"
+    (testing "영화 생성 성공 - 선택 필드 포함"
       (let [command (assoc base-command
                            :runtime 120
                            :poster-file "path/to/poster.jpg")]
@@ -60,8 +66,33 @@
                       movie-director-repository-fixture/save-movie-director!
                       (fn [_ movie-id director-id role]
                         {:movie-id movie-id :director-id director-id :role role})
+                      theater-repository-fixture/find-id-by-name (constantly nil)
+                      theater-repository-fixture/save! (fn [_ theater] theater)
+                      movie-theater-repository-fixture/save-movie-theater!
+                      (fn [_ movie-id theater-id]
+                        {:movie-id movie-id :theater-id theater-id})
                       movie-repository-fixture/save! (fn [_ movie] movie)
                       image-gateway-fixture/upload (fn [_ _] {:url "http://example.com/poster.jpg"})]
+          (let [result (use-case/create-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-id" result))))))
+
+    (testing "영화 생성 성공 - 극장 정보 포함"
+      (let [command (assoc base-command
+                          :theater-infos [{:theater-name "CGV 강남"}
+                                        {:theater-name "메가박스 코엑스"}])]
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                     director-repository-fixture/find-by-name (constantly nil)
+                     director-repository-fixture/save! (fn [_ director] director)
+                     movie-director-repository-fixture/save-movie-director!
+                     (fn [_ movie-id director-id role]
+                       {:movie-id movie-id :director-id director-id :role role})
+                     theater-repository-fixture/find-id-by-name (constantly nil)
+                     theater-repository-fixture/save! (fn [_ theater] theater)
+                     movie-theater-repository-fixture/save-movie-theater!
+                     (fn [_ movie-id theater-id]
+                       {:movie-id movie-id :theater-id theater-id})
+                     movie-repository-fixture/save! (fn [_ movie] movie)]
           (let [result (use-case/create-movie movie-use-case command)]
             (is (f/ok? result))
             (is (= "test-id" result))))))
@@ -90,6 +121,8 @@
         movie-director-repository (->TestMovieDirectorRepository)
         actor-repository (->TestActorRepository)
         movie-actor-repository (->TestMovieActorRepository)
+        theater-repository (->TestTheaterRepository)
+        movie-theater-repository (->TestMovieTheaterRepository)
         image-gateway (->TestImageUploadGateway)
         id-generator (->TestIdGenerator)
         uuid-generator (->TestUuidGenerator)
@@ -97,8 +130,10 @@
                                                  movie-repository
                                                  movie-director-repository
                                                  movie-actor-repository
+                                                 movie-theater-repository
                                                  director-repository
                                                  actor-repository
+                                                 theater-repository
                                                  image-gateway
                                                  id-generator
                                                  uuid-generator)

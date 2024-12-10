@@ -16,5 +16,8 @@
   (find-by-chain-type [this chain-type]
     "체인 타입으로 극장들을 조회합니다.")
 
+  (find-id-by-name [this name]
+    "이름으로 극장을 조회합니다.")
+
   (delete! [this theater]
     "극장을 삭제합니다.")) 
