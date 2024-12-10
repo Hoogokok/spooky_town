@@ -273,4 +273,31 @@
                             :height 15000}
                   command {:movie-id "test-movie-id"
                           :poster-file huge-image}]
-              (is (f/failed? (use-case/update-movie movie-use-case command))))))))))
+              (is (f/failed? (use-case/update-movie movie-use-case command))))))))
+
+    (testing "영화 업데이트 성공 - 감독 정보 포함"
+      (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                    movie-repository-fixture/find-by-id (constantly existing-movie)
+                   movie-repository-fixture/save! (fn [_ movie] movie)
+                   director-repository-fixture/find-by-name (constantly nil)
+                   director-repository-fixture/save! (fn [_ director] director)
+                   movie-director-repository-fixture/delete-by-movie-id! (fn [_ _] nil)
+                   movie-director-repository-fixture/save-movie-director! 
+                   (fn [_ movie-id director-id role]
+                     {:movie-id movie-id :director-id director-id :role role})]
+        
+        (testing "새로운 감독 추가"
+          (let [command {:movie-id "test-movie-id"
+                        :director-infos [{:director-name "봉준호" :role "메인 감독"}]}
+                result (use-case/update-movie movie-use-case command)]
+            (is (f/ok? result))
+            (is (= "test-movie-id" result))))
+        
+        (testing "기존 감독 수정"
+          (with-redefs [director-repository-fixture/find-by-name 
+                       (constantly {:director-id "existing-director-id"})]
+            (let [command {:movie-id "test-movie-id"
+                          :director-infos [{:director-name "봉준호" :role "공동 감독"}]}
+                  result (use-case/update-movie movie-use-case command)]
+              (is (f/ok? result))
+              (is (= "test-movie-id" result)))))))))

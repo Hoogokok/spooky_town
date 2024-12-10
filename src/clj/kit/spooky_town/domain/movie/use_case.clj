@@ -30,7 +30,8 @@
                                  runtime
                                  genres
                                  release-info
-                                 poster-file])
+                                 poster-file
+  director-infos])
 
   (defn- process-poster [image-gateway poster-file]
     (when poster-file
@@ -127,22 +128,42 @@
           ;; 검증 실패 시
             (f/fail "필수 필드가 유효하지 않습니다.")))))
 
-    (update-movie [_ {:keys [movie-id poster-file] :as command}]
+    (update-movie [_ {:keys [movie-id title runtime genres release-info poster-file director-infos] :as command}]
       (with-tx movie-repository
         (fn [repo]
           (if-let [movie (movie-repository/find-by-id repo movie-id)]
             (let [poster-result (process-poster image-gateway poster-file)
-                  update-data (cond
-                                (f/failed? poster-result) poster-result
-                                poster-result (-> command
-                                                  (assoc :poster poster-result)
-                                                  (dissoc :poster-file))
-                                :else (dissoc command :poster-file))]
+                  ;; 포스터 처리
+                  base-update-data (cond
+                                    (f/failed? poster-result) poster-result
+                                    poster-result (-> command
+                                                    (assoc :poster poster-result)
+                                                    (dissoc :poster-file))
+                                    :else (dissoc command :poster-file))
+                  ;; 나머지 필드들 추가
+                  update-data (cond-> base-update-data
+                               title (assoc :title title)
+                               runtime (assoc :runtime runtime)
+                               genres (assoc :genres genres)
+                               release-info (assoc :release-info release-info))]
               (if (f/failed? update-data)
                 update-data
                 (if-let [updated-movie (entity/update-movie movie update-data)]
                   (do
                     (movie-repository/save! repo updated-movie)
+                    
+                    ;; 감독 정보 업데이트
+                    (when director-infos
+                      (movie-director-repository/delete-by-movie-id! movie-director-repository movie-id)
+                      (doseq [{:keys [director-name role]} director-infos]
+                        (let [director-id (or
+                                         (:director-id (director-repository/find-by-name director-repository director-name))
+                                         (:director-id
+                                          (director-repository/save! director-repository
+                                                                 {:director-id (id-generator/generate-ulid id-generator)
+                                                                  :director-name director-name})))]
+                          (movie-director-repository/save-movie-director! movie-director-repository movie-id director-id role))))
+                    
                     movie-id)
                   (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
             (f/fail "영화를 찾을 수 없습니다."))))))
