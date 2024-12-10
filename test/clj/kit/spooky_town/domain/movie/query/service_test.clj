@@ -4,18 +4,20 @@
             [kit.spooky-town.domain.movie.test.repository :refer [->TestMovieRepository]]
             [kit.spooky-town.domain.movie-actor.test.repository :refer [->TestMovieActorRepository]]
             [kit.spooky-town.domain.movie-director.test.repository :refer [->TestMovieDirectorRepository]]
+            [kit.spooky-town.domain.movie-theater.test.repository :refer [->TestMovieTheaterRepository]]
             [kit.spooky-town.infrastructure.persistence.transaction :as tx]))
 
 (def ^:private movie-fixture
   {:movie-id "MOVIE123"
-   :uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+   :movie-uuid "550e8400-e29b-41d4-a716-446655440000"
    :title "스크림"
-   :poster {:url "http://example.com/poster.jpg"}
-   :release-date "2024-01-01"
+   :release-info {:status :released
+                 :release-date "2023-01-01"}
    :genres #{:horror :thriller}
-   :release-status :released
-   :created-at (java.util.Date.)
-   :updated-at (java.util.Date.)})
+   :poster {:url "http://example.com/poster.jpg"
+            :width 1920
+            :height 1080}
+   })
 
 (def ^:private actors-fixture
   [{:actor-id "ACTOR1"
@@ -30,9 +32,20 @@
     :name "웨스 크레이븐"
     :role "감독"}])
 
+(def ^:private theaters-fixture
+  [{:theater-id "THT1"
+    :name "메가박스 코엑스"
+    :chain-type :megabox}
+   {:theater-id "THT2"
+    :name "CGV 용산아이파크몰"
+    :chain-type :cgv}])
+
 (defn- with-test-movie [f]
   (with-redefs [kit.spooky-town.domain.movie.test.repository/find-by-id
                 (constantly movie-fixture)
+
+                kit.spooky-town.domain.movie.test.repository/find-id-by-uuid
+                (constantly "MOVIE123")
 
                 kit.spooky-town.domain.movie.test.repository/find-by-criteria
                 (constantly [movie-fixture])
@@ -44,7 +57,10 @@
                 (constantly actors-fixture)
 
                 kit.spooky-town.domain.movie-director.test.repository/find-directors-by-movie
-                (constantly directors-fixture)]
+                (constantly directors-fixture)
+                
+                kit.spooky-town.domain.movie-theater.test.repository/find-theaters-by-movie
+                (constantly theaters-fixture)]
     (f)))
 
 (use-fixtures :each with-test-movie)
@@ -57,23 +73,35 @@
                 (->TestMovieRepository)
                 (->TestMovieActorRepository)
                 (->TestMovieDirectorRepository)
+                (->TestMovieTheaterRepository)
                 with-read-only)]
 
     (testing "영화 상세 정보 조회"
       (testing "모든 관계 정보 포함"
-        (let [result (sut/find-movie service {:movie-id "MOVIE123"
+        (let [result (sut/find-movie service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"
                                              :include-actors true
-                                             :include-directors true})]
-          (is (= "MOVIE123" (:movie-id result)))
+                                             :include-directors true
+                                             :include-theaters true})]
+          (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
           (is (= "스크림" (:title result)))
           (is (= actors-fixture (:actors result)))
-          (is (= directors-fixture (:directors result)))))
+          (is (= directors-fixture (:directors result)))
+          (is (= theaters-fixture (:theaters result)))))
 
       (testing "관계 정보 미포함"
-        (let [result (sut/find-movie service {:movie-id "MOVIE123"})]
-          (is (= "MOVIE123" (:movie-id result)))
+        (let [result (sut/find-movie service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"})]
+          (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
           (is (nil? (:actors result)))
-          (is (nil? (:directors result))))))
+          (is (nil? (:directors result)))
+          (is (nil? (:theaters result)))))
+
+      (testing "극장 정보만 포함"
+        (let [result (sut/find-movie service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"
+                                             :include-theaters true})]
+          (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
+          (is (nil? (:actors result)))
+          (is (nil? (:directors result)))
+          (is (= theaters-fixture (:theaters result))))))
 
     (testing "영화 목록 검색"
       (let [result (sut/search-movies service {:page 1
@@ -85,7 +113,7 @@
         (is (= "스크림" (-> result :movies first :title)))))
 
     (testing "영화 요약 정보 조회"
-      (let [result (sut/get-movie-summary service {:movie-id "MOVIE123"})]
-        (is (= "MOVIE123" (:movie-id result)))
+      (let [result (sut/get-movie-summary service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"})]
+        (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
         (is (= "스크림" (:title result)))
         (is (= "http://example.com/poster.jpg" (:poster-url result))))))) 

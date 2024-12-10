@@ -240,3 +240,68 @@ SELECT u.*
 FROM users u
 JOIN user_roles ur ON u.user_id = ur.user_id
 WHERE ur.role_id = :role-id AND u.deleted_at IS NULL;
+
+-- 극장 관련 쿼리
+-- :name save-theater! :! :n
+-- :doc 새로운 극장을 생성합니다
+INSERT INTO theaters (theater_id, uuid, chain_type, created_at, updated_at)
+VALUES (:theater_id, :uuid, :chain_type, :created_at, :updated_at)
+RETURNING theater_id, uuid, chain_type, created_at;
+
+-- :name get-theater-by-id :? :1
+-- :doc ID로 극장을 조회합니다 (내부용)
+SELECT theater_id, uuid, chain_type, created_at, updated_at
+FROM theaters
+WHERE theater_id = :theater_id;
+
+-- :name get-theater-by-uuid :? :1
+-- :doc UUID로 극장을 조회합니다 (외부용)
+SELECT theater_id, uuid, chain_type, created_at, updated_at
+FROM theaters
+WHERE uuid = :uuid;
+
+-- :name find-theaters-by-chain-type :? :*
+-- :doc 체인 타입으로 극장들을 조회합니다
+SELECT theater_id, uuid, chain_type, created_at, updated_at
+FROM theaters
+WHERE chain_type = :chain_type;
+
+-- 영화-극장 관계 쿼리
+-- :name save-movie-theater! :! :n
+-- :doc 영화-극장 관계를 저장합니다
+INSERT INTO movie_theaters (movie_id, theater_id, created_at)
+VALUES (:movie_id, :theater_id, :created_at)
+RETURNING movie_id, theater_id, created_at;
+
+-- :name get-theaters-by-movie :? :*
+-- :doc 영화의 상영 극장 목록을 조회합니다
+SELECT t.*
+FROM theaters t
+JOIN movie_theaters mt ON t.theater_id = mt.theater_id
+WHERE mt.movie_id = :movie_id;
+
+-- :name get-theaters-by-movies :? :*
+-- :doc 여러 영화의 상영 극장 목록을 한 번에 조회합니다 (N+1 방지)
+SELECT t.*, mt.movie_id
+FROM theaters t
+JOIN movie_theaters mt ON t.theater_id = mt.theater_id
+WHERE mt.movie_id = ANY(:movie_ids::varchar[]);
+
+-- :name get-movies-by-theater :? :*
+-- :doc 극장의 상영 영화 목록을 조회합니다
+SELECT m.*
+FROM movies m
+JOIN movie_theaters mt ON m.movie_id = mt.movie_id
+WHERE mt.theater_id = :theater_id
+  AND m.deleted_at IS NULL;
+
+-- :name delete-movie-theater! :! :n
+-- :doc 영화-극장 관계를 삭제합니다
+DELETE FROM movie_theaters
+WHERE movie_id = :movie_id AND theater_id = :theater_id;
+
+-- :name get-theater-by-name :? :1
+-- :doc 이름으로 극장을 조회합니다
+SELECT theater_id, uuid, chain_type, created_at, updated_at
+FROM theaters
+WHERE theater_name = :theater_name;

@@ -10,6 +10,9 @@
 (defn find-movies-by-director [_ _]
   (throw (ex-info "Not implemented" {})))
 
+(defn delete-by-movie-id! [_ _]
+  (throw (ex-info "Not implemented" {})))
+
 (defrecord TestMovieDirectorRepository []
   MovieDirectorRepository
   (save-movie-director! [this movie-id director-id role] 
@@ -17,4 +20,6 @@
   (find-directors-by-movie [this movie-id] 
     (find-directors-by-movie this movie-id))
   (find-movies-by-director [this director-id] 
-    (find-movies-by-director this director-id))) 
+    (find-movies-by-director this director-id))
+  (delete-by-movie-id! [this movie-id]
+    (delete-by-movie-id! this movie-id))) 

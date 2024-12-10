@@ -141,6 +141,16 @@
   :tx-manager #ig/ref :db/tx-manager
   :queries #ig/ref :db.sql/queries}
 
+ :infrastructure/theater-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
+ :infrastructure/movie-theater-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
  :infrastructure/email-verification-gateway
  {:secret #or [#env EMAIL_VERIFICATION_SECRET "VERIFICATION_SECRET_HERE"]}
 
@@ -183,22 +193,24 @@
   :role-request-repository #ig/ref :infrastructure/role-request-repository
   :event-publisher #ig/ref :infrastructure/event-bus}
 
- :domain/movie-use-case
- {:with-tx #ig/ref :db/tx-manager
-  :movie-repository #ig/ref :infrastructure/movie-repository
-  :actor-repository #ig/ref :infrastructure/actor-repository
-  :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
-  :movie-director-repository #ig/ref :infrastructure/movie-director-repository
-  :director-repository #ig/ref :infrastructure/director-repository
-  :event-publisher #ig/ref :infrastructure/event-bus
-  :id-generator #ig/ref :infrastructure/ulid-generator
-  :uuid-generator #ig/ref :infrastructure/uuid-generator
-  :image-gateway #ig/ref :infrastructure/cloudinary-storage}
+:domain/movie-use-case
+{:with-tx #ig/ref :db/tx-manager
+ :movie-repository #ig/ref :infrastructure/movie-repository
+ :movie-director-repository #ig/ref :infrastructure/movie-director-repository
+ :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
+ :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
+ :theater-repository #ig/ref :infrastructure/theater-repository
+ :director-repository #ig/ref :infrastructure/director-repository
+ :actor-repository #ig/ref :infrastructure/actor-repository
+ :image-gateway #ig/ref :infrastructure/cloudinary-storage
+ :id-generator #ig/ref :infrastructure/id-generator
+ :uuid-generator #ig/ref :infrastructure/uuid-generator}
 
  :domain/movie-query-service
  {:movie-repository #ig/ref :infrastructure/movie-repository
   :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
   :movie-director-repository #ig/ref :infrastructure/movie-director-repository
+  :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
   :tx-manager #ig/ref :db/tx-manager}
 
 

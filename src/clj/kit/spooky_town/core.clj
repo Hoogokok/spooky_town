@@ -34,6 +34,8 @@
    [kit.spooky-town.infrastructure.persistence.director]
    [kit.spooky-town.infrastructure.persistence.movie-director]
    [kit.spooky-town.infrastructure.persistence.movie-actor]
+   [kit.spooky-town.infrastructure.persistence.movie-theater]
+   [kit.spooky-town.infrastructure.persistence.theater]
    [kit.spooky-town.infrastructure.persistence.role]
    [kit.spooky-town.infrastructure.persistence.user-role]
    ;; Use-cases
