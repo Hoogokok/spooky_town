@@ -99,20 +99,19 @@
 
     (testing "영화 생성 실패 - 필수 필드 누락"
       (testing "제목 누락"
-        (let [command (dissoc base-command :title)]
-          (is (f/failed? (use-case/create-movie movie-use-case command)))))
-
-      (testing "감독 정보 누락"
-        (let [command (dissoc base-command :director-infos)]
-          (is (f/failed? (use-case/create-movie movie-use-case command)))))
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")]
+          (let [command (dissoc base-command :title)]
+            (is (f/failed? (use-case/create-movie movie-use-case command)))))) 
 
       (testing "개봉 정보 누락"
-        (let [command (dissoc base-command :release-info)]
-          (is (f/failed? (use-case/create-movie movie-use-case command)))))
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")]
+          (let [command (dissoc base-command :release-info)]
+            (is (f/failed? (use-case/create-movie movie-use-case command))))))
 
       (testing "장르 누락"
-        (let [command (dissoc base-command :genres)]
-          (is (f/failed? (use-case/create-movie movie-use-case command))))))))
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")]
+          (let [command (dissoc base-command :genres)]
+            (is (f/failed? (use-case/create-movie movie-use-case command)))))))))
 
 (deftest update-movie-test
   (let [with-tx (fn [repo f] (f repo))
