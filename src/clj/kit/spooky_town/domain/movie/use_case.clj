@@ -25,13 +25,13 @@
                                  movie-actor-infos runtime poster-file
                                  theater-infos])
 
-  (defrecord UpdateMovieCommand [movie-id
+  (defrecord UpdateMovieCommand [movie-uuid
                                  title
                                  runtime
                                  genres
                                  release-info
                                  poster-file
-  director-infos])
+                                 director-infos])
 
   (defn- process-poster [image-gateway poster-file]
     (when poster-file
@@ -128,19 +128,18 @@
           ;; 검증 실패 시
             (f/fail "필수 필드가 유효하지 않습니다.")))))
 
-    (update-movie [_ {:keys [movie-id title runtime genres release-info poster-file director-infos] :as command}]
+    (update-movie [_ {:keys [movie-uuid title runtime genres release-info poster-file director-infos] :as command}]
       (with-tx movie-repository
         (fn [repo]
-          (if-let [movie (movie-repository/find-by-id repo movie-id)]
-            (let [poster-result (process-poster image-gateway poster-file)
-                  ;; 포스터 처리
+          (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
+            (let [movie-id (:movie-id movie)
+                  poster-result (process-poster image-gateway poster-file)
                   base-update-data (cond
                                     (f/failed? poster-result) poster-result
                                     poster-result (-> command
                                                     (assoc :poster poster-result)
                                                     (dissoc :poster-file))
                                     :else (dissoc command :poster-file))
-                  ;; 나머지 필드들 추가
                   update-data (cond-> base-update-data
                                title (assoc :title title)
                                runtime (assoc :runtime runtime)
