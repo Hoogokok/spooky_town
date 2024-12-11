@@ -327,3 +327,66 @@
                   result (use-case/update-movie movie-use-case command)]
               (is (f/ok? result))
               (is (= "test-movie-id" result)))))))))
+
+(deftest delete-movie-test
+  (let [with-tx (fn [repo f] (f repo))
+        movie-repository (->TestMovieRepository)
+        director-repository (->TestDirectorRepository)
+        movie-director-repository (->TestMovieDirectorRepository)
+        actor-repository (->TestActorRepository)
+        movie-actor-repository (->TestMovieActorRepository)
+        theater-repository (->TestTheaterRepository)
+        movie-theater-repository (->TestMovieTheaterRepository)
+        image-gateway (->TestImageUploadGateway)
+        id-generator (->TestIdGenerator)
+        uuid-generator (->TestUuidGenerator)
+        movie-use-case (->CreateMovieUseCaseImpl with-tx
+                                                 movie-repository
+                                                 movie-director-repository
+                                                 movie-actor-repository
+                                                 movie-theater-repository
+                                                 director-repository
+                                                 actor-repository
+                                                 theater-repository
+                                                 image-gateway
+                                                 id-generator
+                                                 uuid-generator)
+        existing-movie {:movie-id "test-movie-id"
+                        :uuid #uuid "00000000-0000-0000-0000-000000000000"
+                        :title "원제목"
+                        :release-info {:release-status :upcoming
+                                       :release-date "2024-12-25"}
+                        :genres #{:horror :psychological}
+                        :created-at (java.util.Date.)
+                        :updated-at (java.util.Date.)
+                        :is-deleted false}]
+
+    (testing "영화 삭제 성공"
+      (let [saved-movie (atom nil)]
+        (with-redefs [movie-repository-fixture/find-by-uuid (constantly existing-movie)
+                      movie-repository-fixture/save! (fn [_ movie]
+                                                       (reset! saved-movie movie)
+                                                       movie)
+                      movie-repository-fixture/mark-as-deleted! (fn [_ _ _] nil)]
+          (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
+                         :user-id "test-user-id"}
+                result (use-case/delete-movie! movie-use-case command)]
+            (is (f/ok? result))
+            (is (:success result))
+            (is (:is-deleted @saved-movie))
+            (is (some? (:deleted-at @saved-movie)))))))
+
+    (testing "영화 삭제 실패"
+      (testing "존재하지 않는 영화"
+        (with-redefs [movie-repository-fixture/find-by-uuid (constantly nil)]
+          (let [command {:movie-uuid #uuid "11111111-1111-1111-1111-111111111111"
+                         :user-id "test-user-id"}]
+            (is (f/failed? (use-case/delete-movie! movie-use-case command))))))
+
+      (testing "저장 실패"
+        (with-redefs [movie-repository-fixture/find-by-uuid (constantly existing-movie)
+                      movie-repository-fixture/save! (constantly nil)
+                      movie-repository-fixture/mark-as-deleted! (fn [_ _ _] false)]
+          (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
+                         :user-id "test-user-id"}]
+            (is (f/failed? (use-case/delete-movie! movie-use-case command)))))))))

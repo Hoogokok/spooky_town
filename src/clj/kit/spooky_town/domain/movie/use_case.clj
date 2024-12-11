@@ -19,7 +19,9 @@
     (create-movie [this command]
       "새로운 영화를 생성합니다.")
     (update-movie [this command]
-      "영화 정보를 업데이트합니다."))
+      "영화 정보를 업데이트합니다.")
+    (delete-movie! [this command]
+      "영화를 삭제합니다."))
 
   (defrecord CreateMovieCommand [title director-infos release-info genres
                                  movie-actor-infos runtime poster-file
@@ -32,8 +34,10 @@
                                  release-info
                                  poster-file
                                  director-infos
-  theater-infos])
+                                 theater-infos])
 
+  (defrecord DeleteMovieCommand [movie-uuid])
+  
   (defn- process-poster [image-gateway poster-file]
     (when poster-file
       (if-let [validated-file (value/create-poster-file poster-file)]
@@ -129,65 +133,77 @@
       (movie-theater-repository/save-movie-theater! movie-theater-repository movie-id theater-id))))
 
 (defrecord CreateMovieUseCaseImpl [with-tx
-                                     movie-repository
-                                     movie-director-repository
-                                     movie-actor-repository
-                                     movie-theater-repository
-                                     director-repository
-                                     actor-repository
-                                     theater-repository
-                                     image-gateway
-                                     id-generator
-                                     uuid-generator]
-    MovieUseCase
-    (create-movie [_ {:keys [title director-infos release-info genres
-                             runtime movie-actor-infos poster-file
-                             theater-infos] :as command}]
-      (with-tx movie-repository
-        (fn [repo]
-          (let [validated-runtime (when runtime (value/create-runtime runtime))
-                poster (when poster-file
-                        (when-let [uploaded (image-gateway/upload image-gateway poster-file)]
-                          (value/create-poster uploaded)))
+                                   movie-repository
+                                   movie-director-repository
+                                   movie-actor-repository
+                                   movie-theater-repository
+                                   director-repository
+                                   actor-repository
+                                   theater-repository
+                                   image-gateway
+                                   id-generator
+                                   uuid-generator]
+  MovieUseCase
+  (create-movie [_ {:keys [title director-infos release-info genres
+                           runtime movie-actor-infos poster-file
+                           theater-infos] :as command}]
+    (with-tx movie-repository
+      (fn [repo]
+        (let [validated-runtime (when runtime (value/create-runtime runtime))
+              poster (when poster-file
+                       (when-let [uploaded (image-gateway/upload image-gateway poster-file)]
+                         (value/create-poster uploaded)))
                 ;; 기본 영화 데이터 생성
-                movie-data (prepare-base-movie-data id-generator 
-                                                  uuid-generator 
-                                                  title 
-                                                  release-info 
-                                                  genres 
-                                                  validated-runtime 
+              movie-data (prepare-base-movie-data id-generator
+                                                  uuid-generator
+                                                  title
+                                                  release-info
+                                                  genres
+                                                  validated-runtime
                                                   poster)]
             ;; 엔티티 생성 시 유효성 검증
-            (if-let [movie (entity/create-movie movie-data)]
-              (let [movie-id (:movie-id movie-data)]
+          (if-let [movie (entity/create-movie movie-data)]
+            (let [movie-id (:movie-id movie-data)]
                 ;; 영화 저장
-                (movie-repository/save! repo movie)
-                
-                ;; 관계 정보 저장
-                (save-director-relations movie-director-repository director-repository id-generator movie-id director-infos)
-                (save-actor-relations movie-actor-repository actor-repository id-generator movie-id movie-actor-infos)
-                (save-theater-relations movie-theater-repository theater-repository id-generator movie-id theater-infos)
-                
-                movie-id)
-              (f/fail "필수 필드가 유효하지 않습니다."))))))
+              (movie-repository/save! repo movie)
 
-    (update-movie [_ {:keys [movie-uuid] :as command}]
-      (with-tx movie-repository
-        (fn [repo]
-          (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
-            (let [movie-id (:movie-id movie)
-                  poster-result (process-poster image-gateway (:poster-file command))
-                  update-data (prepare-base-update-data command poster-result)]
-              (if (f/failed? update-data)
-                update-data
-                (if-let [updated-movie (entity/update-movie movie update-data)]
-                  (do
-                    (movie-repository/save! repo updated-movie)
-                    (update-director-info movie-director-repository director-repository id-generator movie-id (:director-infos command))
-                    (update-theater-info movie-theater-repository theater-repository id-generator movie-id (:theater-infos command))
-                    movie-id)
-                  (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
-            (f/fail "영화를 찾을 수 없습니다."))))))
+                ;; 관계 정보 저장
+              (save-director-relations movie-director-repository director-repository id-generator movie-id director-infos)
+              (save-actor-relations movie-actor-repository actor-repository id-generator movie-id movie-actor-infos)
+              (save-theater-relations movie-theater-repository theater-repository id-generator movie-id theater-infos)
+
+              movie-id)
+            (f/fail "필수 필드가 유효하지 않습니다."))))))
+
+  (update-movie [_ {:keys [movie-uuid] :as command}]
+    (with-tx movie-repository
+      (fn [repo]
+        (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
+          (let [movie-id (:movie-id movie)
+                now (java.util.Date.)
+                poster-result (process-poster image-gateway (:poster-file command))
+                update-data (prepare-base-update-data command poster-result)]
+            (if (f/failed? update-data)
+              update-data
+              (if-let [updated-movie (entity/update-movie movie update-data now)]
+                (do
+                  (movie-repository/save! repo updated-movie)
+                  (update-director-info movie-director-repository director-repository id-generator movie-id (:director-infos command))
+                  (update-theater-info movie-theater-repository theater-repository id-generator movie-id (:theater-infos command))
+                  movie-id)
+                (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
+          (f/fail "영화를 찾을 수 없습니다.")))))
+
+  (delete-movie! [_ {:keys [movie-uuid]}]
+    (with-tx movie-repository
+      (fn [repo]
+        (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
+          (let [now (java.util.Date.)
+                deleted (entity/mark-as-deleted movie now)]
+            (if (movie-repository/save! repo deleted)
+              {:success true}
+              (f/fail "영화 삭제에 실패했습니다.")))
+          (f/fail "영화를 찾을 수 없습니다."))))))
 
   (defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository movie-theater-repository director-repository actor-repository theater-repository image-gateway id-generator uuid-generator]}]
     (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository movie-theater-repository director-repository actor-repository theater-repository image-gateway id-generator uuid-generator))
