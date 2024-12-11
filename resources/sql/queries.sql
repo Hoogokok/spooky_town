@@ -305,3 +305,12 @@ WHERE movie_id = :movie_id AND theater_id = :theater_id;
 SELECT theater_id, uuid, chain_type, created_at, updated_at
 FROM theaters
 WHERE theater_name = :theater_name;
+
+-- :name get-user-roles-by-uuid :? :*
+-- :doc UUID로 사용자의 모든 역할을 조회합니다
+SELECT r.role_name as role
+FROM roles r
+JOIN user_roles ur ON r.role_id = ur.role_id
+JOIN users u ON ur.user_id = u.user_id
+WHERE u.uuid = :user_uuid
+  AND u.deleted_at IS NULL;
