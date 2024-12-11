@@ -164,6 +164,11 @@
   :api-key #or [#env CLOUDINARY_API_KEY "your-api-key"]
   :api-secret #or [#env CLOUDINARY_API_SECRET "your-api-secret"]}
 
+ :infrastructure/user-authorization
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
  :infrastructure/role-repository
  {:datasource #ig/ref :db.sql/connection
   :tx-manager #ig/ref :db/tx-manager
@@ -193,18 +198,19 @@
   :role-request-repository #ig/ref :infrastructure/role-request-repository
   :event-publisher #ig/ref :infrastructure/event-bus}
 
-:domain/movie-use-case
-{:with-tx #ig/ref :db/tx-manager
- :movie-repository #ig/ref :infrastructure/movie-repository
- :movie-director-repository #ig/ref :infrastructure/movie-director-repository
- :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
- :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
- :theater-repository #ig/ref :infrastructure/theater-repository
- :director-repository #ig/ref :infrastructure/director-repository
- :actor-repository #ig/ref :infrastructure/actor-repository
- :image-gateway #ig/ref :infrastructure/cloudinary-storage
- :id-generator #ig/ref :infrastructure/id-generator
- :uuid-generator #ig/ref :infrastructure/uuid-generator}
+ :domain/movie-use-case
+ {:with-tx #ig/ref :db/tx-manager
+  :movie-repository #ig/ref :infrastructure/movie-repository
+  :movie-director-repository #ig/ref :infrastructure/movie-director-repository
+  :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
+  :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
+  :theater-repository #ig/ref :infrastructure/theater-repository
+  :director-repository #ig/ref :infrastructure/director-repository
+  :actor-repository #ig/ref :infrastructure/actor-repository
+  :image-gateway #ig/ref :infrastructure/cloudinary-storage
+  :id-generator #ig/ref :infrastructure/id-generator
+  :uuid-generator #ig/ref :infrastructure/uuid-generator
+  :user-authorization #ig/ref :infrastructure/user-authorization}
 
  :domain/movie-query-service
  {:movie-repository #ig/ref :infrastructure/movie-repository

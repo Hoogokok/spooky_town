@@ -21,6 +21,7 @@
    [kit.spooky-town.infrastructure.auth.jwt-email-token-gateway]
    [kit.spooky-town.infrastructure.auth.bcrypt-gateway]
    [kit.spooky-town.infrastructure.auth.email-verification-gateway]
+   [kit.spooky-town.infrastructure.auth.authorization]
    [kit.spooky-town.infrastructure.id.ulid]
    [kit.spooky-town.infrastructure.id.uuid-generator]
    [kit.spooky-town.infrastructure.image.cloudinary]
