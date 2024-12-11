@@ -88,7 +88,8 @@
     (is (nil? (entity/->summary nil)))))
 
 (deftest update-movie-test
-  (let [movie (entity/create-movie valid-movie-data)]
+  (let [movie (entity/create-movie valid-movie-data)
+      now (java.util.Date.)]
     
     (testing "전체 필드 업데이트"
       (let [updates {:title "새로운 제목"
@@ -96,93 +97,137 @@
                     :genres #{:horror :gore}
                     :release-info {:release-status :released
                                  :release-date "2024-01-01"}}
-            updated (entity/update-movie movie updates)]
+            updated (entity/update-movie movie updates now)]
         (is (some? updated))
         (is (= "새로운 제목" (:title updated)))
         (is (= 120 (:runtime updated)))
         (is (= #{:horror :gore} (:genres updated)))
         (is (= (:release-info updates) (:release-info updated)))
-        (is (not= (:updated-at movie) (:updated-at updated)))))
+        (is (= now (:updated-at updated)))))
 
     (testing "선택적 필드 업데이트"
       (testing "제목만 업데이트"
         (let [updates {:title "새로운 제목"}
-              updated (entity/update-movie movie updates)]
+              updated (entity/update-movie movie updates now)]
           (is (some? updated))
           (is (= "새로운 제목" (:title updated)))
           (is (= (:runtime movie) (:runtime updated)))
           (is (= (:genres movie) (:genres updated)))
           (is (= (:release-info movie) (:release-info updated)))
-          (is (not= (:updated-at movie) (:updated-at updated)))))
+          (is (= now (:updated-at updated)))))
 
       (testing "상영시간만 업데이트"
         (let [updates {:runtime 120}
-              updated (entity/update-movie movie updates)]
+              updated (entity/update-movie movie updates now)]
           (is (some? updated))
           (is (= (:title movie) (:title updated)))
           (is (= 120 (:runtime updated)))
           (is (= (:genres movie) (:genres updated)))
           (is (= (:release-info movie) (:release-info updated)))
-          (is (not= (:updated-at movie) (:updated-at updated)))))
+          (is (= now (:updated-at updated)))))
 
       (testing "장르만 업데이트"
         (let [updates {:genres #{:horror :gore}}
-              updated (entity/update-movie movie updates)]
+              updated (entity/update-movie movie updates now)]
           (is (some? updated))
           (is (= (:title movie) (:title updated)))
           (is (= (:runtime movie) (:runtime updated)))
           (is (= #{:horror :gore} (:genres updated)))
           (is (= (:release-info movie) (:release-info updated)))
-          (is (not= (:updated-at movie) (:updated-at updated)))))
+          (is (= now (:updated-at updated)))))
 
       (testing "개봉정보만 업데이트"
         (let [updates {:release-info {:release-status :released
                                     :release-date "2024-01-01"}}
-              updated (entity/update-movie movie updates)]
+              updated (entity/update-movie movie updates now)]
           (is (some? updated))
           (is (= (:title movie) (:title updated)))
           (is (= (:runtime movie) (:runtime updated)))
           (is (= (:genres movie) (:genres updated)))
           (is (= (:release-info updates) (:release-info updated)))
-          (is (not= (:updated-at movie) (:updated-at updated))))))
+          (is (= now (:updated-at updated))))))
 
     (testing "유효하지 않은 업데이트"
       (testing "빈 제목"
-        (is (nil? (entity/update-movie movie {:title ""}))))
+        (is (nil? (entity/update-movie movie {:title ""} now))))
       
       (testing "잘못된 상영시간"
-        (is (nil? (entity/update-movie movie {:runtime -10}))))
+        (is (nil? (entity/update-movie movie {:runtime -10} now))))
       
       (testing "필수 장르 누락"
-        (is (nil? (entity/update-movie movie {:genres #{:gore :psychological}}))))
+        (is (nil? (entity/update-movie movie {:genres #{:gore :psychological}} now))))
       
       (testing "잘못된 개봉일"
         (is (nil? (entity/update-movie movie 
                    {:release-info {:release-status :released
-                                 :release-date "2024-13-45"}}))))) 
+                                 :release-date "2024-13-45"}} now))))) 
     
     (testing "포스터 업데이트"
       (let [new-poster {:url "http://example.com/new-poster.jpg"
                        :width 800
                        :height 1200}
             updates {:poster new-poster}
-            updated (entity/update-movie movie updates)]
+            updated (entity/update-movie movie updates now)]
         (is (some? updated))
         (is (= new-poster (:poster updated)))
-        (is (not= (:updated-at movie) (:updated-at updated)))))
+        (is (= now (:updated-at updated)))))
 
     (testing "포스터를 포함한 복합 업데이트"
       (let [updates {:title "새로운 제목"
                     :poster {:url "http://example.com/new-poster.jpg"
                             :width 800
                             :height 1200}}
-            updated (entity/update-movie movie updates)]
+            updated (entity/update-movie movie updates now)]
         (is (some? updated))
         (is (= "새로운 제목" (:title updated)))
         (is (= (:url (:poster updates)) (:url (:poster updated))))
-        (is (not= (:updated-at movie) (:updated-at updated)))))
+        (is (= now (:updated-at updated)))))
 
     (testing "유효하지 않은 포스터 업데이트"
       (testing "잘못된 포스터 데이터"
         (is (nil? (entity/update-movie movie 
-                   {:poster {:url ""}})))))))
+                   {:poster {:url ""}} now)))))
+
+  (testing "영화 삭제 처리"
+    (let [deleted (entity/mark-as-deleted movie now)]
+      (is (some? deleted))
+      (is (:is-deleted deleted))
+      (is (= now (:deleted-at deleted)))
+      (is (= now (:updated-at deleted)))))
+
+  (testing "이미 삭제된 영화는 다시 삭제할 수 없음"
+    (let [deleted (entity/mark-as-deleted movie now)]
+      (is (nil? (entity/mark-as-deleted deleted now)))))
+
+  (testing "삭제된 영화는 수정할 수 없음"
+    (let [deleted (entity/mark-as-deleted movie now)
+          updates {:title "새로운 제목"}]
+      (is (nil? (entity/update-movie deleted updates now)))))
+
+  (testing "deleted? 함수"
+    (is (false? (entity/deleted? movie)))
+    (is (true? (entity/deleted? (entity/mark-as-deleted movie now)))))))
+
+(deftest movie-deletion-test
+  (let [movie (entity/create-movie valid-movie-data)
+        now (java.util.Date.)]
+
+    (testing "영화 삭제 처리"
+      (let [deleted (entity/mark-as-deleted movie now)]
+        (is (some? deleted))
+        (is (:is-deleted deleted))
+        (is (= now (:deleted-at deleted)))
+        (is (= now (:updated-at deleted)))))
+
+    (testing "이미 삭제된 영화는 다시 삭제할 수 없음"
+      (let [deleted (entity/mark-as-deleted movie now)]
+        (is (nil? (entity/mark-as-deleted deleted now)))))
+
+    (testing "삭제된 영화는 수정할 수 없음"
+      (let [deleted (entity/mark-as-deleted movie now)
+            updates {:title "새로운 제목"}]
+        (is (nil? (entity/update-movie deleted updates now)))))
+
+    (testing "deleted? 함수"
+      (is (false? (entity/deleted? movie)))
+      (is (true? (entity/deleted? (entity/mark-as-deleted movie now)))))))

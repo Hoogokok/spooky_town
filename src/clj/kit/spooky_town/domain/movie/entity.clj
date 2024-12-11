@@ -13,34 +13,43 @@
 (s/def ::genres ::value/genres)
 (s/def ::runtime (s/nilable ::value/runtime))
 (s/def ::poster (s/nilable ::image/image))
+(s/def ::is-deleted boolean?)
+(s/def ::deleted-at (s/nilable inst?))
 
 (s/def ::movie
   (s/keys :req-un [::movie-id ::uuid ::created-at ::updated-at
-                   ::title ::release-info ::genres]
-          :opt-un [::runtime ::poster]))
+                   ::title ::release-info ::genres ::is-deleted]
+  :opt-un [::runtime ::poster ::deleted-at]))
 
 (defrecord Movie [movie-id uuid title release-info genres
                   runtime poster
-                  created-at updated-at])
+                  created-at updated-at
+  is-deleted deleted-at])
 
 (defn create-movie
   [{:keys [movie-id uuid title release-info genres
            runtime poster
-           created-at updated-at]}]
+           created-at updated-at
+   is-deleted deleted-at]
+  :or {is-deleted false}}]
   (let [movie (map->Movie
                (cond-> {:movie-id movie-id
-                        :uuid uuid
-                        :title title
-                        :release-info release-info
-                        :genres genres
-                        :created-at (or created-at (java.util.Date.))
-                        :updated-at (or updated-at (java.util.Date.))}
+                       :uuid uuid
+:title title
+:release-info release-info
+:genres genres
+                       :created-at created-at
+ :updated-at (or updated-at created-at)
+ :is-deleted is-deleted}
 
                  runtime
                  (assoc :runtime runtime)
 
                  poster
-                 (assoc :poster poster)))]
+                 (assoc :poster poster)
+
+   deleted-at
+   (assoc :deleted-at deleted-at)))]
     (when (s/valid? ::movie movie)
       movie)))
 
@@ -77,13 +86,26 @@
   (when-let [validated-poster (value/create-poster new-poster)]
     (assoc movie :poster validated-poster)))
 
-(defn update-movie [movie {:keys [title runtime genres release-info poster]}]
-  (when-let [updated (-> movie
-                        (cond-> 
-                          title (update-title title)
-                          runtime (update-runtime runtime)
-                          genres (update-genres genres)
-                          release-info (update-release-info release-info)
-                          poster (update-poster poster))
-                        (assoc :updated-at (java.util.Date.)))]
-    (create-movie updated)))
+(defn mark-as-deleted
+  [movie deleted-at]
+  (when (and (not (:is-deleted movie)) deleted-at)
+    (-> movie
+        (assoc :is-deleted true
+               :deleted-at deleted-at
+               :updated-at deleted-at))))
+
+(defn deleted?
+  [movie]
+  (:is-deleted movie))
+
+(defn update-movie [movie {:keys [title runtime genres release-info poster]} updated-at]
+  (when-not (deleted? movie)
+    (when-let [updated (-> movie
+                           (cond->
+                            title (update-title title)
+                            runtime (update-runtime runtime)
+                            genres (update-genres genres)
+                            release-info (update-release-info release-info)
+                            poster (update-poster poster))
+                          (assoc :updated-at updated-at))]
+   (create-movie updated))))
