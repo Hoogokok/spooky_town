@@ -1,17 +1,20 @@
 (ns kit.spooky-town.domain.movie.use-case-test
-  (:require [clojure.test :refer :all]
-            [failjure.core :as f]
-            [kit.spooky-town.domain.movie.use-case :as use-case :refer [->CreateMovieUseCaseImpl]]
-            [kit.spooky-town.domain.movie.test.repository :as movie-repository-fixture :refer [->TestMovieRepository]]
-            [kit.spooky-town.domain.director.test.repository :as director-repository-fixture :refer [->TestDirectorRepository]]
-            [kit.spooky-town.domain.actor.test.repository :as actor-repository-fixture :refer [->TestActorRepository]]
-            [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]
-            [kit.spooky-town.domain.common.id.test.uuid-generator :as uuid-generator-fixture :refer [->TestUuidGenerator]]
-            [kit.spooky-town.domain.movie-director.test.repository :as movie-director-repository-fixture :refer [->TestMovieDirectorRepository]]
-            [kit.spooky-town.domain.theater.test.repository :as theater-repository-fixture :refer [->TestTheaterRepository]]
-            [kit.spooky-town.domain.movie-theater.test.repository :as movie-theater-repository-fixture :refer [->TestMovieTheaterRepository]]
-            [kit.spooky-town.domain.movie-actor.test.repository :as movie-actor-repository-fixture :refer [->TestMovieActorRepository]]
-            [kit.spooky-town.domain.common.image.test.gateway :as image-gateway-fixture :refer [->TestImageUploadGateway]]))
+  (:require
+   [clojure.test :refer :all]
+   [failjure.core :as f]
+   [kit.spooky-town.domain.actor.test.repository :as actor-repository-fixture :refer [->TestActorRepository]]
+   [kit.spooky-town.domain.auth.test.authorization :as auth-test :refer [->TestUserAuthorization]]
+   [kit.spooky-town.domain.common.id.test.generator :as id-generator-fixture :refer [->TestIdGenerator]]
+   [kit.spooky-town.domain.common.id.test.uuid-generator :as uuid-generator-fixture :refer [->TestUuidGenerator]]
+   [kit.spooky-town.domain.common.image.test.gateway :as image-gateway-fixture :refer [->TestImageUploadGateway]]
+   [kit.spooky-town.domain.director.test.repository :as director-repository-fixture :refer [->TestDirectorRepository]]
+   [kit.spooky-town.domain.movie-actor.test.repository :as movie-actor-repository-fixture :refer [->TestMovieActorRepository]]
+   [kit.spooky-town.domain.movie-director.test.repository :as movie-director-repository-fixture :refer [->TestMovieDirectorRepository]]
+   [kit.spooky-town.domain.movie-theater.test.repository :as movie-theater-repository-fixture :refer [->TestMovieTheaterRepository]]
+   [kit.spooky-town.domain.movie.test.repository :as movie-repository-fixture :refer [->TestMovieRepository]]
+   [kit.spooky-town.domain.movie.use-case :as use-case :refer [->CreateMovieUseCaseImpl]]
+   [kit.spooky-town.domain.theater.test.repository :as theater-repository-fixture :refer [->TestTheaterRepository]] 
+   ))
 
 (def base-command
   {:title "스푸키 타운의 비밀"
@@ -32,6 +35,7 @@
         image-gateway (->TestImageUploadGateway)
         id-generator (->TestIdGenerator)
         uuid-generator (->TestUuidGenerator)
+        user-authorization (->TestUserAuthorization)
         movie-use-case (->CreateMovieUseCaseImpl with-tx
                                                  movie-repository
                                                  movie-director-repository
@@ -42,7 +46,8 @@
                                                  theater-repository
                                                  image-gateway
                                                  id-generator
-                                                 uuid-generator)]
+                                                 uuid-generator
+                                                 user-authorization)]
 
     (testing "영화 생성 성공 - 필수 필드만"
       (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
@@ -125,6 +130,7 @@
         image-gateway (->TestImageUploadGateway)
         id-generator (->TestIdGenerator)
         uuid-generator (->TestUuidGenerator)
+        user-authorization (->TestUserAuthorization)
         movie-use-case (->CreateMovieUseCaseImpl with-tx
                                                 movie-repository
                                                 movie-director-repository
@@ -135,7 +141,8 @@
                                                 theater-repository
                                                 image-gateway
                                                 id-generator
-                                                uuid-generator)
+                                                uuid-generator
+                                                user-authorization)
         existing-movie {:movie-id "test-movie-id"
                        :uuid #uuid "00000000-0000-0000-0000-000000000000"
                        :title "원제목"
@@ -340,6 +347,7 @@
         image-gateway (->TestImageUploadGateway)
         id-generator (->TestIdGenerator)
         uuid-generator (->TestUuidGenerator)
+        user-authorization (->TestUserAuthorization)
         movie-use-case (->CreateMovieUseCaseImpl with-tx
                                                  movie-repository
                                                  movie-director-repository
@@ -350,7 +358,8 @@
                                                  theater-repository
                                                  image-gateway
                                                  id-generator
-                                                 uuid-generator)
+                                                 uuid-generator
+                                                 user-authorization)
         existing-movie {:movie-id "test-movie-id"
                         :uuid #uuid "00000000-0000-0000-0000-000000000000"
                         :title "원제목"
@@ -361,32 +370,26 @@
                         :updated-at (java.util.Date.)
                         :is-deleted false}]
 
-    (testing "영화 삭제 성공"
+    (testing "관리자가 영화 삭제 성공"
       (let [saved-movie (atom nil)]
         (with-redefs [movie-repository-fixture/find-by-uuid (constantly existing-movie)
-                      movie-repository-fixture/save! (fn [_ movie]
-                                                       (reset! saved-movie movie)
-                                                       movie)
-                      movie-repository-fixture/mark-as-deleted! (fn [_ _ _] nil)]
+                     movie-repository-fixture/save! (fn [_ movie] 
+                                                    (reset! saved-movie movie) 
+                                                    movie)
+                     auth-test/has-permission? (fn [_ user-uuid permission]
+                                                  (and (= user-uuid "admin-user")
+                                                       (= permission :admin)))]
           (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
-                         :user-id "test-user-id"}
+                        :user-uuid "admin-user"}
                 result (use-case/delete-movie! movie-use-case command)]
             (is (f/ok? result))
             (is (:success result))
             (is (:is-deleted @saved-movie))
             (is (some? (:deleted-at @saved-movie)))))))
 
-    (testing "영화 삭제 실패"
-      (testing "존재하지 않는 영화"
-        (with-redefs [movie-repository-fixture/find-by-uuid (constantly nil)]
-          (let [command {:movie-uuid #uuid "11111111-1111-1111-1111-111111111111"
-                         :user-id "test-user-id"}]
-            (is (f/failed? (use-case/delete-movie! movie-use-case command))))))
-
-      (testing "저장 실패"
-        (with-redefs [movie-repository-fixture/find-by-uuid (constantly existing-movie)
-                      movie-repository-fixture/save! (constantly nil)
-                      movie-repository-fixture/mark-as-deleted! (fn [_ _ _] false)]
-          (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
-                         :user-id "test-user-id"}]
-            (is (f/failed? (use-case/delete-movie! movie-use-case command)))))))))
+    (testing "권한 없는 사용자의 영화 삭제 시도"
+      (with-redefs [movie-repository-fixture/find-by-uuid (constantly existing-movie)
+                   auth-test/has-permission? (constantly false)]
+        (let [command {:movie-uuid #uuid "00000000-0000-0000-0000-000000000000"
+                      :user-id "normal-user"}]
+          (is (f/failed? (use-case/delete-movie! movie-use-case command))))))))

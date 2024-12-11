@@ -3,16 +3,17 @@
    [failjure.core :as f]
    [integrant.core :as ig]
    [kit.spooky-town.domain.actor.repository.protocol :as actor-repository]
+   [kit.spooky-town.domain.auth.authorization.protocol :refer [has-permission?]]
    [kit.spooky-town.domain.common.id.protocol :as id-generator]
    [kit.spooky-town.domain.common.image.gateway.protocol :as image-gateway]
    [kit.spooky-town.domain.director.repository.protocol :as director-repository]
    [kit.spooky-town.domain.movie-actor.repository.protocol :as movie-actor-repository]
    [kit.spooky-town.domain.movie-director.repository.protocol :as movie-director-repository]
+   [kit.spooky-town.domain.movie-theater.repository.protocol :as movie-theater-repository]
    [kit.spooky-town.domain.movie.entity :as entity]
    [kit.spooky-town.domain.movie.repository.protocol :as movie-repository]
-   [kit.spooky-town.domain.movie-theater.repository.protocol :as movie-theater-repository]
-   [kit.spooky-town.domain.theater.repository.protocol :as theater-repository]
-   [kit.spooky-town.domain.movie.value :as value]))
+   [kit.spooky-town.domain.movie.value :as value]
+   [kit.spooky-town.domain.theater.repository.protocol :as theater-repository]))
 
 
   (defprotocol MovieUseCase
@@ -142,7 +143,8 @@
                                    theater-repository
                                    image-gateway
                                    id-generator
-                                   uuid-generator]
+                                   uuid-generator
+                                   user-authorization]
   MovieUseCase
   (create-movie [_ {:keys [title director-infos release-info genres
                            runtime movie-actor-infos poster-file
@@ -194,16 +196,19 @@
                 (f/fail "영화 정보 업데이트가 유효하지 않습니다."))))
           (f/fail "영화를 찾을 수 없습니다.")))))
 
-  (delete-movie! [_ {:keys [movie-uuid]}]
-    (with-tx movie-repository
-      (fn [repo]
-        (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
-          (let [now (java.util.Date.)
-                deleted (entity/mark-as-deleted movie now)]
-            (if (movie-repository/save! repo deleted)
-              {:success true}
-              (f/fail "영화 삭제에 실패했습니다.")))
-          (f/fail "영화를 찾을 수 없습니다."))))))
+  (delete-movie! [_ {:keys [movie-uuid user-uuid]}]
+    (if (or (has-permission? user-authorization user-uuid :admin)
+            (has-permission? user-authorization user-uuid :content-manager))
+      (with-tx movie-repository
+        (fn [repo]
+          (if-let [movie (movie-repository/find-by-uuid repo movie-uuid)]
+            (let [now (java.util.Date.)
+                  deleted (entity/mark-as-deleted movie now)]
+              (if (movie-repository/save! repo deleted)
+                {:success true}
+                (f/fail "영화 삭제에 실패했습니다.")))
+            (f/fail "영화를 찾을 수 없습니다."))))
+      (f/fail "영화를 삭제할 권한이 없습니다."))))
 
-  (defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository movie-theater-repository director-repository actor-repository theater-repository image-gateway id-generator uuid-generator]}]
-    (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository movie-theater-repository director-repository actor-repository theater-repository image-gateway id-generator uuid-generator))
+  (defmethod ig/init-key :domain/movie-use-case [_ {:keys [with-tx movie-repository movie-director-repository movie-actor-repository movie-theater-repository director-repository actor-repository theater-repository image-gateway id-generator uuid-generator user-authorization]}]
+    (->CreateMovieUseCaseImpl with-tx movie-repository movie-director-repository movie-actor-repository movie-theater-repository director-repository actor-repository theater-repository image-gateway id-generator uuid-generator user-authorization))
