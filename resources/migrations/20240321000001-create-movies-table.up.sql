@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS movies (
   title VARCHAR(255) NOT NULL,
   description TEXT,
   release_date DATE,
+  is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
+  deleted_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 ); 
+
+CREATE INDEX idx_movies_is_deleted ON movies(is_deleted); 

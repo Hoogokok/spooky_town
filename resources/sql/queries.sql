@@ -122,12 +122,13 @@ FROM movies
 WHERE uuid = :uuid AND deleted_at IS NULL;
 
 -- :name mark-movie-as-deleted! :! :n
--- :doc 영화를 소프트 삭제 처리합니다
+-- :doc 영화를 논리적으로 삭제 처리합니다
 UPDATE movies
-SET deleted_at = CURRENT_TIMESTAMP,
-    updated_at = CURRENT_TIMESTAMP
+SET deleted_at = :deleted_at,
+    updated_at = CURRENT_TIMESTAMP,
+    is_deleted = true
 WHERE movie_id = :movie_id
-RETURNING movie_id, uuid, deleted_at;
+RETURNING movie_id, uuid, deleted_at, is_deleted;
 
 -- 감독 관련 쿼리
 -- :name save-director! :! :n
@@ -305,3 +306,47 @@ WHERE movie_id = :movie_id AND theater_id = :theater_id;
 SELECT theater_id, uuid, chain_type, created_at, updated_at
 FROM theaters
 WHERE theater_name = :theater_name;
+
+-- :name get-user-roles-by-uuid :? :*
+-- :doc UUID로 사용자의 모든 역할을 조회합니다
+SELECT r.role_name as role
+FROM roles r
+JOIN user_roles ur ON r.role_id = ur.role_id
+JOIN users u ON ur.user_id = u.user_id
+WHERE u.uuid = :user_uuid
+  AND u.deleted_at IS NULL;
+
+-- :name find-movies-by-criteria :? :*
+-- :doc 조건에 따라 영화를 조회합니다
+SELECT m.*
+FROM movies m
+WHERE 1=1
+  AND (:include_deleted IS NULL OR
+       CASE
+         WHEN :include_deleted::boolean = true THEN true
+         ELSE m.deleted_at IS NULL
+       END)
+  AND (:title IS NULL OR m.title ILIKE ('%' || :title || '%'))
+  AND (:release_date_from IS NULL OR m.release_date >= :release_date_from::date)
+  AND (:release_date_to IS NULL OR m.release_date <= :release_date_to::date)
+ORDER BY
+  CASE WHEN :sort_by = 'title' AND :sort_direction = 'asc' THEN m.title END ASC,
+  CASE WHEN :sort_by = 'title' AND :sort_direction = 'desc' THEN m.title END DESC,
+  CASE WHEN :sort_by = 'release_date' AND :sort_direction = 'asc' THEN m.release_date END ASC,
+  CASE WHEN :sort_by = 'release_date' AND :sort_direction = 'desc' THEN m.release_date END DESC,
+  m.created_at DESC
+LIMIT :limit OFFSET :offset;
+
+-- :name count-movies-by-criteria :? :1
+-- :doc 조건에 맞는 영화의 총 개수를 반환합니다
+SELECT COUNT(*) as count
+FROM movies m
+WHERE 1=1
+  AND (:include_deleted IS NULL OR
+       CASE
+         WHEN :include_deleted::boolean = true THEN true
+         ELSE m.deleted_at IS NULL
+       END)
+  AND (:title IS NULL OR m.title ILIKE ('%' || :title || '%'))
+  AND (:release_date_from IS NULL OR m.release_date >= :release_date_from::date)
+  AND (:release_date_to IS NULL OR m.release_date <= :release_date_to::date);

@@ -32,4 +32,15 @@
     (if (f/failed? result)
       (response/bad-request {:error (f/message result)})
       (response/ok {:movie-id result}))))
+
+(defn delete-movie [{:keys [path-params identity movie-use-case]}]
+  (let [command {:movie-uuid (parse-uuid (:movie-uuid path-params))
+                 :user-id (:uuid identity)}
+        result (movie-use-case/delete-movie! movie-use-case command)]
+    (cond
+      (f/failed? result) (case (::f/type result)
+                          :unauthorized (response/forbidden {:error (f/message result)})
+                          :not-found (response/not-found)
+                          (response/bad-request {:error (f/message result)}))
+      :else (response/ok {:success true}))))
  

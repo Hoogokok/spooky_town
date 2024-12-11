@@ -96,7 +96,15 @@
                   :responses {200 {:body [:map [:movie-uuid string?]]}
                              400 {:body [:map [:error string?]]}
                              404 {:body empty?}}
-                  :handler movie/update-movie}})]
+                  :handler movie/update-movie}
+            
+            :delete {:summary "Delete movie"
+                    :parameters {:path [:map [:movie-uuid string?]]}
+                    :responses {200 {:body [:map [:success boolean?]]}
+                              400 {:body [:map [:error string?]]}
+                              403 {:body [:map [:error string?]]}
+                              404 {:body empty?}}
+                    :handler movie/delete-movie}})]
    
    ["/:movie-uuid/summary"
     {:get {:summary "Get movie summary"
