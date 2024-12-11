@@ -13,7 +13,6 @@
   (find-id-by-uuid [this uuid]
     "UUID로 영화 ID를 조회합니다.")
 
-  ;; 새로 추가되는 메서드들
   (find-by-criteria [this criteria]
     "주어진 조건으로 영화 목록을 검색합니다.
      criteria: {:page pos-int?
@@ -23,7 +22,11 @@
                :director-name string?
                :actor-name string?
                :genres set?
-               :release-status keyword?}")
+               :release-status keyword?
+               :include-deleted? boolean?}")
 
   (count-by-criteria [this criteria]
-    "검색 조건에 맞는 전체 영화 수를 반환합니다."))
+    "검색 조건에 맞는 전체 영화 수를 반환합니다.")
+
+ (mark-as-deleted! [this movie-id timestamp]
+                   "영화를 논리적으로 삭제 처리합니다."))
