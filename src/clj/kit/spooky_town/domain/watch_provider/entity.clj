@@ -6,19 +6,18 @@
 (s/def ::watch-provider
   (s/keys :req-un [::value/provider-id
                    ::value/provider-name
-                   ::value/created-at]
+                   ::value/created-at
+                   ::value/uuid]
           :opt-un [::value/logo-url]))
 
-(defrecord WatchProvider [provider-id provider-name logo-url created-at]
-  Object
-  (toString [this]
-    (str "WatchProvider[" provider-id "," provider-name "]")))
+(defrecord WatchProvider [provider-id provider-name logo-url created-at uuid])
 
-(defn create-watch-provider [{:keys [provider-id provider-name logo-url created-at]}]
+(defn create-watch-provider [{:keys [provider-id provider-name logo-url created-at uuid]}]
   (let [watch-provider (map->WatchProvider
                         {:provider-id provider-id
                          :provider-name provider-name
                          :logo-url logo-url
-                         :created-at created-at})]
+                         :created-at created-at
+                         :uuid uuid})]
     (when (s/valid? ::watch-provider watch-provider)
       watch-provider)))

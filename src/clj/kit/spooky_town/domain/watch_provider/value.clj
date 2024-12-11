@@ -38,3 +38,6 @@
 (defn create-timestamp [value]
   (when (s/valid? ::created-at value)
     value))
+
+;; uuid
+(s/def ::uuid uuid?)
