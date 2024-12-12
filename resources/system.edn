@@ -238,5 +238,7 @@
   :tx-manager #ig/ref :db/tx-manager
   :role-request-use-case #ig/ref :domain/role-request-use-case
   :user-use-case #ig/ref :domain/user-use-case
-  :movie-use-case #ig/ref :domain/movie-use-case}}
+  :movie-use-case #ig/ref :domain/movie-use-case
+  :movie-query-service #ig/ref :domain/movie-query-service
+  :movie-provider-use-case #ig/ref :domain/movie-provider-use-case}}
 
