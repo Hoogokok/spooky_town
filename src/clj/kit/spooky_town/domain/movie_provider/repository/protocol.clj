@@ -16,5 +16,5 @@
   (find-by-provider [this provider-id]
     "OTT 플랫폼 ID로 연결된 영화들을 조회합니다.")
   
-  (delete! [this movie-provider-id]
+  (delete! [this movie-id provider-id]
     "영화-OTT 플랫폼 연결을 삭제합니다.")) 
