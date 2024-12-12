@@ -51,6 +51,7 @@
 
     (testing "영화 생성 성공 - 필수 필드만"
       (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                    uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")
                     director-repository-fixture/find-by-name (constantly nil)
                     director-repository-fixture/save! (fn [_ director] director)
                     movie-director-repository-fixture/save-movie-director!
