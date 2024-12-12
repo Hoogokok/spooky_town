@@ -51,6 +51,7 @@
 
     (testing "영화 생성 성공 - 필수 필드만"
       (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                    uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")
                     director-repository-fixture/find-by-name (constantly nil)
                     director-repository-fixture/save! (fn [_ director] director)
                     movie-director-repository-fixture/save-movie-director!
@@ -66,6 +67,7 @@
                            :runtime 120
                            :poster-file "path/to/poster.jpg")]
         (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                      uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")
                       director-repository-fixture/find-by-name (constantly nil)
                       director-repository-fixture/save! (fn [_ director] director)
                       movie-director-repository-fixture/save-movie-director!
@@ -87,34 +89,38 @@
                           :theater-infos [{:theater-name "CGV 강남"}
                                         {:theater-name "메가박스 코엑스"}])]
         (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
-                     director-repository-fixture/find-by-name (constantly nil)
-                     director-repository-fixture/save! (fn [_ director] director)
-                     movie-director-repository-fixture/save-movie-director!
-                     (fn [_ movie-id director-id role]
-                       {:movie-id movie-id :director-id director-id :role role})
-                     theater-repository-fixture/find-id-by-name (constantly nil)
-                     theater-repository-fixture/save! (fn [_ theater] theater)
-                     movie-theater-repository-fixture/save-movie-theater!
-                     (fn [_ movie-id theater-id]
-                       {:movie-id movie-id :theater-id theater-id})
-                     movie-repository-fixture/save! (fn [_ movie] movie)]
+                      uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")
+                      director-repository-fixture/find-by-name (constantly nil)
+                      director-repository-fixture/save! (fn [_ director] director)
+                      movie-director-repository-fixture/save-movie-director!
+                      (fn [_ movie-id director-id role]
+                        {:movie-id movie-id :director-id director-id :role role})
+                      theater-repository-fixture/find-id-by-name (constantly nil)
+                      theater-repository-fixture/save! (fn [_ theater] theater)
+                      movie-theater-repository-fixture/save-movie-theater!
+                      (fn [_ movie-id theater-id]
+                        {:movie-id movie-id :theater-id theater-id})
+                      movie-repository-fixture/save! (fn [_ movie] movie)]
           (let [result (use-case/create-movie movie-use-case command)]
             (is (f/ok? result))
             (is (= "test-id" result))))))
 
     (testing "영화 생성 실패 - 필수 필드 누락"
       (testing "제목 누락"
-        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")]
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                      uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")]
           (let [command (dissoc base-command :title)]
             (is (f/failed? (use-case/create-movie movie-use-case command)))))) 
 
       (testing "개봉 정보 누락"
-        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")]
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                      uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")]
           (let [command (dissoc base-command :release-info)]
             (is (f/failed? (use-case/create-movie movie-use-case command))))))
 
       (testing "장르 누락"
-        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")]
+        (with-redefs [id-generator-fixture/generate-ulid (constantly "test-id")
+                      uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")]
           (let [command (dissoc base-command :genres)]
             (is (f/failed? (use-case/create-movie movie-use-case command)))))))))
 

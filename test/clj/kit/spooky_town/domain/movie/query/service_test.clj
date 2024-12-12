@@ -5,6 +5,7 @@
             [kit.spooky-town.domain.movie-actor.test.repository :refer [->TestMovieActorRepository]]
             [kit.spooky-town.domain.movie-director.test.repository :refer [->TestMovieDirectorRepository]]
             [kit.spooky-town.domain.movie-theater.test.repository :refer [->TestMovieTheaterRepository]]
+            [kit.spooky-town.domain.movie-provider.test.repository :refer [->TestMovieProviderRepository]]
             [kit.spooky-town.infrastructure.persistence.transaction :as tx]))
 
 (def ^:private movie-fixture
@@ -16,8 +17,7 @@
    :genres #{:horror :thriller}
    :poster {:url "http://example.com/poster.jpg"
             :width 1920
-            :height 1080}
-   })
+            :height 1080}})
 
 (def ^:private actors-fixture
   [{:actor-id "ACTOR1"
@@ -40,6 +40,12 @@
     :name "CGV 용산아이파크몰"
     :chain-type :cgv}])
 
+(def ^:private providers-fixture
+  [{:provider-id "NETFLIX"
+    :name "Netflix"}
+   {:provider-id "WATCHA"
+    :name "Watcha"}])
+
 (defn- with-test-movie [f]
   (with-redefs [kit.spooky-town.domain.movie.test.repository/find-by-id
                 (constantly movie-fixture)
@@ -60,7 +66,10 @@
                 (constantly directors-fixture)
                 
                 kit.spooky-town.domain.movie-theater.test.repository/find-theaters-by-movie
-                (constantly theaters-fixture)]
+                (constantly theaters-fixture)
+                
+                kit.spooky-town.domain.movie-provider.test.repository/find-by-movie
+                (constantly providers-fixture)]
     (f)))
 
 (use-fixtures :each with-test-movie)
@@ -74,6 +83,7 @@
                 (->TestMovieActorRepository)
                 (->TestMovieDirectorRepository)
                 (->TestMovieTheaterRepository)
+                (->TestMovieProviderRepository)
                 with-read-only)]
 
     (testing "영화 상세 정보 조회"
@@ -81,27 +91,31 @@
         (let [result (sut/find-movie service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"
                                              :include-actors true
                                              :include-directors true
-                                             :include-theaters true})]
+                                             :include-theaters true
+                                             :include-providers true})]
           (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
           (is (= "스크림" (:title result)))
           (is (= actors-fixture (:actors result)))
           (is (= directors-fixture (:directors result)))
-          (is (= theaters-fixture (:theaters result)))))
+          (is (= theaters-fixture (:theaters result)))
+          (is (= providers-fixture (:providers result)))))
 
       (testing "관계 정보 미포함"
         (let [result (sut/find-movie service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"})]
           (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
           (is (nil? (:actors result)))
           (is (nil? (:directors result)))
-          (is (nil? (:theaters result)))))
+          (is (nil? (:theaters result)))
+          (is (nil? (:providers result)))))
 
-      (testing "극장 정보만 포함"
+      (testing "OTT 플랫폼 정보만 포함"
         (let [result (sut/find-movie service {:movie-uuid "550e8400-e29b-41d4-a716-446655440000"
-                                             :include-theaters true})]
+                                             :include-providers true})]
           (is (= "550e8400-e29b-41d4-a716-446655440000" (:movie-uuid result)))
           (is (nil? (:actors result)))
           (is (nil? (:directors result)))
-          (is (= theaters-fixture (:theaters result))))))
+          (is (nil? (:theaters result)))
+          (is (= providers-fixture (:providers result))))))
 
     (testing "영화 목록 검색"
       (let [result (sut/search-movies service {:page 1

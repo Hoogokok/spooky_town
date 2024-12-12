@@ -21,6 +21,7 @@
 
     (testing "극장 생성"
       (with-redefs [id-generator-fixture/generate-ulid (constantly "01HQ1234567890ABCDEFGHJKLM")
+                    uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")
                     theater-repository-fixture/save! (fn [_ theater] theater)]
         (let [result (use-case/create-theater! use-case base-command)]
           (is (some? result))

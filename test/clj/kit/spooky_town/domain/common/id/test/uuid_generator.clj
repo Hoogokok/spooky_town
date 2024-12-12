@@ -1,7 +1,9 @@
 (ns kit.spooky-town.domain.common.id.test.uuid-generator
   (:require [kit.spooky-town.domain.common.id.protocol :as protocol]))
 
+(defn generate-uuid [_]
+  (throw (ex-info "Not implemented" {})))
+
 (defrecord TestUuidGenerator []
   protocol/UuidGenerator
-  (generate-uuid [_]
-    #uuid "550e8400-e29b-41d4-a716-446655440000")) 
+  (generate-uuid [this] (generate-uuid this))) 

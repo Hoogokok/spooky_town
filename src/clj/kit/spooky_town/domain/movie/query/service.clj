@@ -5,6 +5,7 @@
             [kit.spooky-town.domain.movie-actor.repository.protocol :as movie-actor-repo]
             [kit.spooky-town.domain.movie-director.repository.protocol :as movie-director-repo] 
             [kit.spooky-town.domain.movie-theater.repository.protocol :as movie-theater-repo]
+            [kit.spooky-town.domain.movie-provider.repository.protocol :as movie-provider-repo]
             [integrant.core :as ig]))
 
 (defprotocol MovieQueryService
@@ -13,7 +14,8 @@
      params: {:movie-uuid string?
               :include-actors boolean?
               :include-directors boolean?
-              :include-theaters boolean?}")
+              :include-theaters boolean?
+              :include-providers boolean?}")
 
   (search-movies [this params]
     "영화 목록을 검색합니다.
@@ -34,11 +36,16 @@
                                 movie-actor-repository 
                                 movie-director-repository 
                                 movie-theater-repository
+                                movie-provider-repository
                                 with-read-only]
   MovieQueryService
   (find-movie [_ params]
-    (with-read-only [movie-repository movie-actor-repository movie-director-repository movie-theater-repository]
-      (fn [movie-repo actor-repo director-repo movie-theater-repo]
+    (with-read-only [movie-repository 
+                     movie-actor-repository 
+                     movie-director-repository 
+                     movie-theater-repository
+                     movie-provider-repository]
+      (fn [movie-repo actor-repo director-repo theater-repo provider-repo]
         (when-let [movie-id (movie-repo/find-id-by-uuid movie-repo (:movie-uuid params))]
           (when-let [movie (movie-repo/find-by-id movie-repo movie-id)]
             (cond-> movie
@@ -49,7 +56,10 @@
               (assoc :directors (movie-director-repo/find-directors-by-movie director-repo movie-id))
 
               (:include-theaters params)
-              (assoc :theaters (movie-theater-repo/find-theaters-by-movie movie-theater-repo movie-id))))))))
+              (assoc :theaters (movie-theater-repo/find-theaters-by-movie theater-repo movie-id))
+              
+              (:include-providers params)
+              (assoc :providers (movie-provider-repo/find-by-movie provider-repo movie-id))))))))
 
   (search-movies [_ params]
     (with-read-only [movie-repository]
@@ -69,10 +79,16 @@
             (entity/->summary movie)))))))
 
 (defmethod ig/init-key :domain/movie-query-service
-  [_ {:keys [movie-repository movie-actor-repository movie-director-repository movie-theater-repository with-read-only]}]
+  [_ {:keys [movie-repository 
+             movie-actor-repository 
+             movie-director-repository 
+             movie-theater-repository
+             movie-provider-repository
+             with-read-only]}]
   (->MovieQueryServiceImpl 
     movie-repository 
     movie-actor-repository 
     movie-director-repository 
     movie-theater-repository
+    movie-provider-repository
     with-read-only))

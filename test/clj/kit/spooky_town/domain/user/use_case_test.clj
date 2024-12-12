@@ -130,6 +130,7 @@
     (testing "유효한 사용자 등록"
       (with-redefs [user-repository-fixture/find-by-email (fn [_ _] nil)
                     id-generator-fixture/generate-ulid (fn [_] "user-01")
+                    uuid-generator-fixture/generate-uuid (constantly #uuid "550e8400-e29b-41d4-a716-446655440000")
                     password-gateway-fixture/hash-password (fn [_ _] "hashed_password")
                     role-repository-fixture/find-by-name (fn [_ _]
                                                          {:id "role-01"
