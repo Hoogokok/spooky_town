@@ -1,5 +1,6 @@
 (ns kit.spooky-town.web.routes.movie
   (:require [kit.spooky-town.web.controllers.movie :as movie]
+            [kit.spooky-town.web.controllers.movie-provider :as movie-provider]
             [kit.spooky-town.web.routes.common :refer [authenticated-route-data]]
             [kit.spooky-town.web.middleware.multipart :refer [wrap-multipart-params]]))
 
@@ -123,7 +124,44 @@
                                  [:director-names {:optional true} vector?]
                                  [:release-status keyword?]]}
                       404 {:body empty?}}
-           :handler movie/get-movie-summary}}]])
+           :handler movie/get-movie-summary}}]
+   
+   ["/:movie-uuid/providers"
+    (merge authenticated-route-data
+           {:post {:summary "영화에 OTT 플랫폼 연결"
+                  :parameters {:path [:map [:movie-uuid string?]]
+                             :body [:map [:provider-id string?]]}
+                  :responses {201 {:body [:map [:success boolean?]]}
+                            400 {:body [:map [:error string?]]}
+                            403 {:body [:map [:error string?]]}}
+                  :handler movie-provider/assign-provider}
+
+            :get {:summary "영화의 OTT 플랫폼 목록 조회"
+                 :parameters {:path [:map [:movie-uuid string?]]}
+                 :responses {200 {:body [:map
+                                      [:providers [:vector [:map
+                                                          [:provider-id string?]
+                                                          [:name string?]]]]]}
+                          404 {:body empty?}}
+                 :handler movie-provider/get-providers}
+
+            :delete {:summary "영화에서 OTT 플랫폼 연결 해제"
+                    :parameters {:path [:map [:movie-uuid string?]]
+                               :body [:map [:provider-id string?]]}
+                    :responses {200 {:body [:map [:success boolean?]]}
+                              400 {:body [:map [:error string?]]}
+                              403 {:body [:map [:error string?]]}}
+                    :handler movie-provider/remove-provider}})]
+   
+   ["/providers/:provider-id/movies"
+    {:get {:summary "OTT 플랫폼의 영화 목록 조회"
+           :parameters {:path [:map [:provider-id string?]]}
+           :responses {200 {:body [:map
+                                 [:movies [:vector [:map
+                                                  [:movie-id string?]
+                                                  [:title string?]]]]]}
+                     404 {:body empty?}}
+           :handler movie-provider/get-movies-by-provider}}]])
 
 (defn movie-routes [opts]
   movie-routes-data) 
