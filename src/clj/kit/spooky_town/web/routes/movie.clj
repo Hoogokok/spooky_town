@@ -49,7 +49,8 @@
                              :query [:map
                                     [:include-actors {:optional true} boolean?]
                                     [:include-directors {:optional true} boolean?]
-                                    [:include-theaters {:optional true} boolean?]]}
+                                    [:include-theaters {:optional true} boolean?]
+                                    [:include-providers {:optional true} boolean?]]}
                   :responses {200 {:body [:map
                                         [:movie-uuid string?]
                                         [:title string?]
@@ -73,7 +74,11 @@
                                                   [:vector [:map
                                                            [:theater-uuid string?]
                                                            [:name string?]
-                                                           [:chain-type keyword?]]]]]}
+                                                           [:chain-type keyword?]]]]
+                                        [:providers {:optional true} 
+                                                   [:vector [:map
+                                                            [:provider-id string?]
+                                                            [:name string?]]]]]}
                           404 {:body empty?}}
                   :handler movie/find-movie}
             
