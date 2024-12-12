@@ -222,7 +222,8 @@
   :movie-actor-repository #ig/ref :infrastructure/movie-actor-repository
   :movie-director-repository #ig/ref :infrastructure/movie-director-repository
   :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
-  :tx-manager #ig/ref :db/tx-manager}
+  :movie-provider-repository #ig/ref :infrastructure/movie-provider-repository
+  :with-read-only #ig/ref :db/tx-manager}
  
   :domain/movie-provider-use-case
  {:movie-provider-repository #ig/ref :infrastructure/movie-provider-repository
