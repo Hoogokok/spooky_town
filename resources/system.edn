@@ -151,6 +151,11 @@
   :tx-manager #ig/ref :db/tx-manager
   :queries #ig/ref :db.sql/queries}
 
+ :infrastructure/movie-provider-repository
+ {:datasource #ig/ref :db.sql/connection
+  :tx-manager #ig/ref :db/tx-manager
+  :queries #ig/ref :db.sql/queries}
+
  :infrastructure/email-verification-gateway
  {:secret #or [#env EMAIL_VERIFICATION_SECRET "VERIFICATION_SECRET_HERE"]}
 
@@ -218,7 +223,14 @@
   :movie-director-repository #ig/ref :infrastructure/movie-director-repository
   :movie-theater-repository #ig/ref :infrastructure/movie-theater-repository
   :tx-manager #ig/ref :db/tx-manager}
-
+ 
+  :domain/movie-provider-use-case
+ {:movie-provider-repository #ig/ref :infrastructure/movie-provider-repository
+  :movie-repository #ig/ref :infrastructure/movie-repository
+  :user-authorization #ig/ref :infrastructure/user-authorization
+  :id-generator #ig/ref :infrastructure/ulid-generator
+  :uuid-generator #ig/ref :infrastructure/uuid-generator
+  :with-tx #ig/ref :db/tx-manager}
 
  :reitit.routes/api
  {:base-path ""
